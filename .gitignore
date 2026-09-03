@@ -1,0 +1,8 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Credentials & Clasp auth
+.clasprc.json
+credentials.json
+node_modules/
