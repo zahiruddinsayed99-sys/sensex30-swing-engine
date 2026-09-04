@@ -29,6 +29,7 @@ function runDataAndIndicatorPipeline() {
         return;
     }
 
+    const constituents = getActiveConstituents();
     // 1. Fetch in two parallel batches of 15
     const BATCH_SIZE = 15;
     const rawResponses = [];
@@ -200,7 +201,7 @@ function runDataAndIndicatorPipeline() {
 
     const execTime = Date.now() - startTime;
     const status = errors.length === 0 ? "SUCCESS" : "PARTIAL";
-    logAudit("runDataAndIndicatorPipeline", "IN_MEMORY_SCAN", status, successCount, "Computed indicators in RAM", errors.join("; "), execTime);
+    logAudit("runDataAndIndicatorPipeline", "FETCH_INDICATORS", "SUCCESS", indicatorRows.length, `Processed ${indicatorRows.length} active constituents`, "", execTime);
 
     SpreadsheetApp.getUi().alert(
         "⚡ In-Memory Scan Complete!\n\n" +
