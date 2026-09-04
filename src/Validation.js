@@ -46,8 +46,8 @@ function validatePhase1Setup() {
   });
 
   const wlSheet = ss.getSheetByName("WATCHLIST");
-  if (wlSheet && (wlSheet.getLastRow() - 1) !== 30) {
-    issues.push("Watchlist row count: expected 30, got " + (wlSheet.getLastRow() - 1));
+  if (wlSheet && (wlSheet.getLastRow() - 1) < 30) {
+    issues.push("Watchlist row count: expected at least 30, got " + (wlSheet.getLastRow() - 1));
   }
 
   if (issues.length === 0) {

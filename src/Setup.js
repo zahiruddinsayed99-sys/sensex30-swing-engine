@@ -38,49 +38,10 @@ function runPhase1Setup() {
         });
 
         // Populate SETTINGS Tab
-        const settingsSheet = ss.getSheetByName("SETTINGS");
-        settingsSheet.clear();
-        const settingsHeaders = SHEET_SCHEMAS.SETTINGS;
-        settingsSheet.getRange(1, 1, 1, settingsHeaders.length).setValues([settingsHeaders])
-            .setFontWeight("bold").setBackground("#1a365d").setFontColor("#ffffff");
-
-        const settingsRows = [
-            ["SYSTEM_VERSION", CONFIG.VERSION, "Strategy engine release version", "STRING"],
-            ["UNIVERSE", CONFIG.UNIVERSE, "Target scan universe", "STRING"],
-            ["CYCLE_CAPITAL", CONFIG.CYCLE_CAPITAL, "Total basket cycle capital (INR)", "NUMBER"],
-            ["SLOT_SIZE", CONFIG.SLOT_SIZE, "Size per tranche buy action (INR)", "NUMBER"],
-            ["TOTAL_CYCLE_SLOTS", CONFIG.TOTAL_CYCLE_SLOTS, "Maximum total slots per cycle", "NUMBER"],
-            ["MAX_DISTINCT_STOCKS", CONFIG.MAX_DISTINCT_STOCKS, "Maximum distinct stock names in basket", "NUMBER"],
-            ["MAX_TRANCHES_PER_STOCK", CONFIG.MAX_TRANCHES_PER_STOCK, "Maximum tranches (slots) per individual stock", "NUMBER"],
-            ["BASKET_TARGET_PERCENT", CONFIG.BASKET_TARGET_PERCENT, "Consolidated profit target for active pool (%)", "NUMBER"],
-            ["QUARANTINE_THRESHOLD_PERCENT", CONFIG.QUARANTINE_THRESHOLD_PERCENT, "Unrealized loss threshold to quarantine position (%)", "NUMBER"],
-            ["SIGNAL_TIME", CONFIG.SIGNAL_TIME, "EOD scan trigger time (IST)", "STRING"],
-            ["EXECUTION_START", CONFIG.EXECUTION_WINDOW.START, "Morning execution window start", "STRING"],
-            ["EXECUTION_END", CONFIG.EXECUTION_WINDOW.END, "Morning execution window end", "STRING"],
-            ["DMA_PERIOD", CONFIG.DMA_PERIOD, "Short-term trend & reclaim moving average", "NUMBER"],
-            ["DMA50_PERIOD", CONFIG.DMA50_PERIOD, "Medium-term trend filter moving average", "NUMBER"],
-            ["VWAP_METHOD", CONFIG.VWAP_METHOD, "Reference VWAP calculation source", "STRING"],
-            ["DIP_THRESHOLD_PERCENT", CONFIG.DIP_THRESHOLD_PERCENT, "Minimum dip % from reference high", "NUMBER"],
-            ["DAILY_BUY_LIMIT", CONFIG.DAILY_BUY_LIMIT, "Maximum new BUY candidates queued per day", "NUMBER"],
-            ["PRIMARY_DATA_SOURCE", CONFIG.PRIMARY_DATA_SOURCE, "EOD price feed provider (NSE on Yahoo)", "STRING"],
-            ["DATA_VALIDATION", CONFIG.DATA_VALIDATION, "Enforce strict data validation prior to scan", "BOOLEAN"]
-        ];
-        settingsSheet.getRange(2, 1, settingsRows.length, settingsRows[0].length).setValues(settingsRows);
-        settingsSheet.setFrozenRows(1);
+        initSettingsTab(ss);
 
         // Populate WATCHLIST Tab
-        const watchlistSheet = ss.getSheetByName("WATCHLIST");
-        const todayStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd");
-        const watchlistRows = SENSEX_30_UNIVERSE.map(item => [
-            item.symbol,
-            item.ticker,
-            "YES",
-            item.sector,
-            "SENSEX 30",
-            todayStr,
-            "V1.0"
-        ]);
-        watchlistSheet.getRange(2, 1, watchlistRows.length, watchlistRows[0].length).setValues(watchlistRows);
+        initWatchlistTab(ss);
 
         // Render Dashboard
         renderDashboardLayout(ss.getSheetByName("DASHBOARD"));
@@ -91,4 +52,70 @@ function runPhase1Setup() {
         logAudit("runPhase1Setup", "SETUP_CLEAN_ENGINE", "FAILED", 0, "", err.message, Date.now() - startTime);
         SpreadsheetApp.getUi().alert("Setup failed: " + err.message);
     }
+}
+
+function initWatchlistTab(ss) {
+  let sheet = ss.getSheetByName("WATCHLIST");
+  if (!sheet) sheet = ss.insertSheet("WATCHLIST");
+  sheet.clear();
+
+  const headers = ["Symbol", "Yahoo Ticker", "Active", "Sector", "Universe", "Universe As Of", "Universe Version"];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight("bold").setBackground("#2d3748").setFontColor("#ffffff");
+
+  const todayStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd");
+  const rows = MASTER_UNIVERSE_100.map(c => [
+    c.symbol,
+    c.ticker,
+    "YES",
+    c.name,
+    c.tier,
+    todayStr,
+    "V2.0"
+  ]);
+
+  sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+  sheet.setColumnWidth(1, 130);
+  sheet.setColumnWidth(2, 150);
+  sheet.setColumnWidth(3, 90);
+  sheet.setColumnWidth(4, 220);
+  sheet.setColumnWidth(5, 120);
+  sheet.setColumnWidth(6, 120);
+  sheet.setColumnWidth(7, 120);
+}
+
+function initSettingsTab(ss) {
+  let sheet = ss.getSheetByName("SETTINGS");
+  if (!sheet) sheet = ss.insertSheet("SETTINGS");
+  sheet.clear();
+
+  const headers = ["Key", "Value", "Description", "Type"];
+  sheet.getRange(1, 1, 1, 4).setValues([headers])
+    .setFontWeight("bold").setBackground("#2d3748").setFontColor("#ffffff");
+
+  const settingsData = [
+    ["CYCLE_CAPITAL", CONFIG.CYCLE_CAPITAL, "Total pool capital for one full cycle (INR)", "NUMBER"],
+    ["TOTAL_SLOTS", CONFIG.TOTAL_CYCLE_SLOTS, "Total tranche slots across all positions", "NUMBER"],
+    ["SLOT_SIZE", CONFIG.SLOT_SIZE, "Capital deployed per tranche (INR)", "NUMBER"],
+    ["MAX_DISTINCT_STOCKS", CONFIG.MAX_DISTINCT_STOCKS, "Maximum portfolio breadth (names)", "NUMBER"],
+    ["SCANNING_UNIVERSE_MODE", UNIVERSE_MODES.SENSEX_30, "Active Scanning Scope (Dropdown)", "STRING"],
+    ["CONSOLIDATED_TARGET_PCT", CONFIG.BASKET_TARGET_PERCENT, "Combined gain exit trigger (+6.5%)", "PERCENT"],
+    ["QUARANTINE_PCT", CONFIG.QUARANTINE_THRESHOLD_PERCENT, "Drawdown limit to freeze averaging (-20%)", "PERCENT"],
+    ["DAILY_BUY_LIMIT", CONFIG.DAILY_BUY_LIMIT, "Max orders queued per session (5)", "NUMBER"],
+    ["DIP_MIN_PCT", CONFIG.DIP_THRESHOLD_PERCENT, "Decline from 30-day reference high (5%)", "PERCENT"],
+    ["REFERENCE_HIGH_LOOKBACK", 30, "Lookback window for reference high (days)", "NUMBER"]
+  ];
+
+  sheet.getRange(2, 1, settingsData.length, 4).setValues(settingsData);
+
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(Object.values(UNIVERSE_MODES), true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange("B6").setDataValidation(rule);
+
+  sheet.setColumnWidth(1, 240);
+  sheet.setColumnWidth(2, 260);
+  sheet.setColumnWidth(3, 380);
+  sheet.setColumnWidth(4, 120);
 }
