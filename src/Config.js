@@ -2,42 +2,42 @@
  * Global Configuration & Schema Definitions — SENSEX 30 Basket Cycle Model V1.0
  */
 const CONFIG = {
-    VERSION: "1.0",
-    UNIVERSE: "SENSEX 30",
-    SIGNAL_TIME: "15:30",
-    EXECUTION_WINDOW: { START: "09:45", END: "11:00" },
+  VERSION: "1.0",
+  UNIVERSE: "SENSEX 30",
+  SIGNAL_TIME: "15:30",
+  EXECUTION_WINDOW: { START: "09:45", END: "11:00" },
 
-    // Basket Cycle Parameters
-    CYCLE_CAPITAL: 100000,          // Total pool: ₹1,00,000
-    SLOT_SIZE: 4000,                 // ₹4,000 per slot action
-    TOTAL_CYCLE_SLOTS: 25,          // 25 slots
-    MAX_DISTINCT_STOCKS: 10,        // Max 10 distinct stocks in basket
-    MAX_TRANCHES_PER_STOCK: 5,      // Max 5 slots (₹20,000) per stock
-    BASKET_TARGET_PERCENT: 6.5,     // Active pool blended target (+6.5%)
-    QUARANTINE_THRESHOLD_PERCENT: -20.0, // Hard quarantine boundary (-20%)
+  // Basket Cycle Parameters
+  CYCLE_CAPITAL: 100000,          // Total pool: ₹1,00,000
+  SLOT_SIZE: 4000,                 // ₹4,000 per slot action
+  TOTAL_CYCLE_SLOTS: 25,          // 25 slots
+  MAX_DISTINCT_STOCKS: 10,        // Max 10 distinct stocks in basket
+  MAX_TRANCHES_PER_STOCK: 5,      // Max 5 slots (₹20,000) per stock
+  BASKET_TARGET_PERCENT: 6.5,     // Active pool blended target (+6.5%)
+  QUARANTINE_THRESHOLD_PERCENT: -20.0, // Hard quarantine boundary (-20%)
 
-    // Strategy Technical Parameters
-    DMA_PERIOD: 20,
-    DMA50_PERIOD: 50,
-    VWAP_METHOD: "PREVIOUS_SESSION",
-    DIP_THRESHOLD_PERCENT: 5.0,
-    DAILY_BUY_LIMIT: 5,
+  // Strategy Technical Parameters
+  DMA_PERIOD: 20,
+  DMA50_PERIOD: 50,
+  VWAP_METHOD: "PREVIOUS_SESSION",
+  DIP_THRESHOLD_PERCENT: 5.0,
+  DAILY_BUY_LIMIT: 5,
 
-    PRIMARY_DATA_SOURCE: "YAHOO_NSE",
-    DATA_VALIDATION: true
+  PRIMARY_DATA_SOURCE: "YAHOO_NSE",
+  DATA_VALIDATION: true
 };
 
 const SHEET_SCHEMAS = {
-    DASHBOARD: [],
-    SETTINGS: ["Key", "Value", "Description", "Type"],
-    WATCHLIST: ["Symbol", "Yahoo Ticker", "Active", "Sector", "Universe", "Universe As Of", "Universe Version"],
-    INDICATORS: ["Date", "Symbol", "Close", "DMA20", "DMA20 Prior", "DMA50", "Previous Session VWAP", "Volume", "Average Volume", "Trend Status", "Dip Status", "Recovery Status", "DMA20 Reclaim", "VWAP Reclaim"],
-    POSITIONS: ["Symbol", "Status", "Current Tranche", "Slots Used", "Total Invested", "Quantity", "Average Price", "Current Price", "Unrealized PnL %", "Basket Status", "Last Buy Date", "Next Eligible Tranche"],
-    SIGNALS: ["Signal ID", "Signal Date", "Signal Time", "Execution Date", "Symbol", "Candidate Type", "Current Tranche", "Next Tranche", "Close", "DMA20", "DMA50", "Previous VWAP", "Dip", "Recovery", "DMA20 Reclaim", "VWAP Reclaim", "Trend", "Rank Score", "Rank", "Final Signal", "Reason", "Signal Status", "Frozen"],
-    ACTION_QUEUE: ["Execution Date", "Symbol", "Action Type", "Tranche", "Slot Amount", "Rank", "Rank Score", "Signal ID", "Validity", "Action Status", "User Confirmation", "Execution ID"],
-    TRADE_LOG: ["Execution ID", "Date", "Time", "Symbol", "Action", "Tranche", "Quantity", "Execution Price", "Gross Value", "Broker", "Signal ID", "User Confirmation", "Notes"],
-    SIGNAL_HISTORY: ["Date", "Symbol", "Candidate Type", "Close", "DMA20", "DMA50", "VWAP", "Trend", "Rank Score", "Rank", "Final Signal", "Reason"],
-    SYSTEM_AUDIT: ["Timestamp", "User", "Function", "Action", "Status", "Records Processed", "Result", "Error", "Execution Time (ms)"]
+  DASHBOARD: [],
+  SETTINGS: ["Key", "Value", "Description", "Type"],
+  WATCHLIST: ["Symbol", "Yahoo Ticker", "Active", "Sector", "Universe", "Universe As Of", "Universe Version"],
+  INDICATORS: ["Date", "Symbol", "Close", "DMA20", "DMA20 Prior", "DMA50", "Previous Session VWAP", "Volume", "Average Volume", "Trend Status", "Dip Status", "Recovery Status", "DMA20 Reclaim", "VWAP Reclaim"],
+  POSITIONS: ["Symbol", "Status", "Current Tranche", "Slots Used", "Total Invested", "Quantity", "Average Price", "Current Price", "Unrealized PnL %", "Basket Status", "Last Buy Date", "Next Eligible Tranche"],
+  SIGNALS: ["Signal ID", "Signal Date", "Signal Time", "Execution Date", "Symbol", "Candidate Type", "Current Tranche", "Next Tranche", "Close", "DMA20", "DMA50", "Previous VWAP", "Dip", "Recovery", "DMA20 Reclaim", "VWAP Reclaim", "Trend", "Rank Score", "Rank", "Final Signal", "Reason", "Signal Status", "Frozen"],
+  ACTION_QUEUE: ["Execution Date", "Symbol", "Action Type", "Tranche", "Slot Amount", "Rank", "Rank Score", "Signal ID", "Validity", "Action Status", "User Confirmation", "Execution ID"],
+  TRADE_LOG: ["Execution ID", "Date", "Time", "Symbol", "Action", "Tranche", "Quantity", "Execution Price", "Gross Value", "Broker", "Signal ID", "User Confirmation", "Notes"],
+  SIGNAL_HISTORY: ["Date", "Symbol", "Candidate Type", "Close", "DMA20", "DMA50", "VWAP", "Trend", "Rank Score", "Rank", "Final Signal", "Reason"],
+  SYSTEM_AUDIT: ["Timestamp", "User", "Function", "Action", "Status", "Records Processed", "Result", "Error", "Execution Time (ms)"]
 };
 
 const UNIVERSE_MODES = {
@@ -110,7 +110,7 @@ const MASTER_UNIVERSE_100 = [
   { symbol: "GAIL", name: "GAIL India", ticker: "GAIL.NS", tier: "NEXT_30" },
   { symbol: "AMBUJACEM", name: "Ambuja Cements", ticker: "AMBUJACEM.NS", tier: "NEXT_30" },
   { symbol: "VEDL", name: "Vedanta Ltd", ticker: "VEDL.NS", tier: "NEXT_30" },
-  { symbol: "ZOMATO", name: "Zomato Ltd", ticker: "ZOMATO.NS", tier: "NEXT_30" },
+  { symbol: "ETERNAL", name: "Eternal (Zomato) Ltd", ticker: "ETERNAL.NS", tier: "NEXT_30" },
 
   // --- TIER 3: BSE 100 EXTENDED LEADERS (Next 40) ---
   { symbol: "ADANIPORTS", name: "Adani Ports & SEZ", ticker: "ADANIPORTS.NS", tier: "TOP_40" },
@@ -133,7 +133,7 @@ const MASTER_UNIVERSE_100 = [
   { symbol: "INTERGLOBE", name: "InterGlobe Aviation (IndiGo)", ticker: "INDIGO.NS", tier: "TOP_40" },
   { symbol: "POLYCAB", name: "Polycab India", ticker: "POLYCAB.NS", tier: "TOP_40" },
   { symbol: "PERSISTENT", name: "Persistent Systems", ticker: "PERSISTENT.NS", tier: "TOP_40" },
-  { symbol: "LTIM", name: "LTIMindtree", ticker: "LTIM.NS", tier: "TOP_40" },
+  { symbol: "LTIM", name: "LTIMindtree", ticker: "LTIM.BO", tier: "TOP_40" },
   { symbol: "MPHASIS", name: "Mphasis Ltd", ticker: "MPHASIS.NS", tier: "TOP_40" },
   { symbol: "COFORGE", name: "Coforge Ltd", ticker: "COFORGE.NS", tier: "TOP_40" },
   { symbol: "COLPAL", name: "Colgate-Palmolive", ticker: "COLPAL.NS", tier: "TOP_40" },
