@@ -13,11 +13,17 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
 
     if (candidates.length > 0) {
         candidates.sort((a, b) => {
-            if (openPositionCount < CONFIG.MAX_DISTINCT_STOCKS) {
-                if (a.candidateType === "NEW_NAME" && b.candidateType === "AVERAGING") return -1;
-                if (a.candidateType === "AVERAGING" && b.candidateType === "NEW_NAME") return 1;
-            }
-            return b.rankScore - a.rankScore;
+          if (openPositionCount < CONFIG.MAX_DISTINCT_STOCKS) {
+            if (a.candidateType === "NEW_NAME" && b.candidateType === "AVERAGING") return -1;
+            if (a.candidateType === "AVERAGING" && b.candidateType === "NEW_NAME") return 1;
+          }
+
+          const tierWeights = { "SENSEX_30": 3, "NEXT_30": 2, "TOP_40": 1 };
+          const tierA = tierWeights[a.tier] || 1;
+          const tierB = tierWeights[b.tier] || 1;
+          if (tierA !== tierB) return tierB - tierA;
+
+          return b.rankScore - a.rankScore;
         });
 
         let currentRank = 1;
