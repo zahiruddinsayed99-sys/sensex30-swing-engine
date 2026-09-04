@@ -91,13 +91,13 @@ function renderDashboardLayout(sheet) {
       "Hinglish Analysis & Rejection Breakdown",
       '=HYPERLINK("#gid=" & IFERROR(SHEETID("VERDICT_REPORT"), "0"), "👉 Open VERDICT_REPORT")',
       "Beginner Friendly Hinglish Insights"
-    ]    
+    ]
   ];
 
-  sheet.getRange("B15:F20").setValues(routineData);
+  sheet.getRange("B15:F21").setValues(routineData);
   sheet.getRange("B15:F15").setFontWeight("bold").setBackground("#e2e8f0").setHorizontalAlignment("center");
-  sheet.getRange("B16:F20").setFontSize(10).setVerticalAlignment("middle");
-  sheet.getRange("E16:E20").setFontWeight("bold").setFontColor("#3182ce");
+  sheet.getRange("B16:F21").setFontSize(10).setVerticalAlignment("middle");
+  sheet.getRange("E16:E21").setFontWeight("bold").setFontColor("#3182ce");
 
   sheet.setColumnWidth(1, 20);
   sheet.setColumnWidth(2, 130);
