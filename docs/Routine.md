@@ -1,157 +1,61 @@
-#
+Agar per-slot budget **₹4,000 se max ₹5,500** hai, toh **Solution 2 (Heavy Outliers ko Liquid Bluechips se swap karna)** bilkul right approach hai.
 
-In-Memory Scan Complete!
+Isse portfolio allocation balanced rahega aur koi bhi single stock pure capital ko block nahi karega.
 
-Execution Time: 16.6s
-Stocks Processed: 54 / 54
-All 30 constituents computed cleanly!
+Aapke list mein se jo stocks ₹5,500 ki upper boundary ko cross karte hain, unka exact 1-to-1 sector-matched alternate mapping yeh raha:
 
-# 3
+| High-Priced Stock (Remove) | CMP (Approx) | Sector | 1-to-1 Bluechip Replacement (Add) | Yahoo Ticker | Alternate CMP |
+| --- | --- | --- | --- | --- | --- |
+| **MRF** | ₹1,29,990 | Auto Ancillary / Tyres | **APOLLOTYRE** | `APOLLOTYRE.NS` | ~₹450 - ₹520 |
+| **BOSCHLTD** | ₹46,800 | Auto Ancillary | **MOTHERSON** (SAMIL) | `MOTHERSON.NS` | ~₹160 - ₹200 |
+| **SHREECEM** | ₹23,980 | Cement | **AMBUJACEM** | `AMBUJACEM.NS` | ~₹550 - ₹650 |
+| **MARUTI** | ₹12,690 | Auto (4-Wheelers) | **TATAMOTORS** | `TATAMOTORS.NS` | ~₹950 - ₹1,100 |
+| **BAJAJ-AUTO** | ₹11,911 | Auto (2-Wheelers) | **TVSMOTOR** | `TVSMOTOR.NS` | ~₹2,400 - ₹2,800 |
+| **ULTRACEMCO** | ₹11,397 | Cement | **GRASIM** | `GRASIM.NS` | ~₹2,500 - ₹2,800 |
+| **BAJAJHLDNG** | ₹11,157 | Finance / Holding | **CHOLAFIN** | `CHOLAFIN.NS` | ~₹1,400 - ₹1,600 |
+| **DIVISLAB** | ₹9,142 | Pharma / API | **CIPLA** | `CIPLA.NS` | ~₹1,500 - ₹1,650 |
+| **APOLLOHOSP** | ₹8,662 | Healthcare / Hospitals | **MAXHEALTH** | `MAXHEALTH.NS` | ~₹900 - ₹1,050 |
+| **POLYCAB** | ₹8,290 | Cables & Electricals | **HAVELLS** | `HAVELLS.NS` | ~₹1,700 - ₹1,900 |
+| **EICHERMOT** | ₹7,629 | Auto | **ASHOKLEY** | `ASHOKLEY.NS` | ~₹210 - ₹250 |
+| **ABB** | ₹7,436 | Capital Goods / Engineering | **SIEMENS** / **BEL** | `BEL.NS` | ~₹280 - ₹320 |
+| **PERSISTENT** | ₹5,652 | Mid-cap IT | **COFORGE** / **MPHASIS** | `MPHASIS.NS` | ~₹2,800 - ₹3,100 |
 
-const SENSEX_30_UNIVERSE = [
-    { symbol: "RELIANCE", ticker: "RELIANCE.NS", sector: "Energy" },
-    { symbol: "TCS", ticker: "TCS.NS", sector: "Information Technology" },
-    { symbol: "HDFCBANK", ticker: "HDFCBANK.NS", sector: "Financial Services" },
-    { symbol: "ICICIBANK", ticker: "ICICIBANK.NS", sector: "Financial Services" },
-    { symbol: "BHARTIARTL", ticker: "BHARTIARTL.NS", sector: "Telecommunication" },
-    { symbol: "INFY", ticker: "INFY.NS", sector: "Information Technology" },
-    { symbol: "SBIN", ticker: "SBIN.NS", sector: "Financial Services" },
-    { symbol: "ITC", ticker: "ITC.NS", sector: "FMCG" },
-    { symbol: "HINDUNILVR", ticker: "HINDUNILVR.NS", sector: "FMCG" },
-    { symbol: "LT", ticker: "LT.NS", sector: "Capital Goods" },
-    { symbol: "BAJFINANCE", ticker: "BAJFINANCE.NS", sector: "Financial Services" },
-    { symbol: "HCLTECH", ticker: "HCLTECH.NS", sector: "Information Technology" },
-    { symbol: "MARUTI", ticker: "MARUTI.NS", sector: "Automobile" },
-    { symbol: "SUNPHARMA", ticker: "SUNPHARMA.NS", sector: "Healthcare" },
-    { symbol: "ADANIENT", ticker: "ADANIENT.NS", sector: "Metals & Mining" },
-    { symbol: "CHOLAFIN", ticker: "CHOLAFIN.NS", sector: "Financial Services" },
-    { symbol: "KOTAKBANK", ticker: "KOTAKBANK.NS", sector: "Financial Services" },
-    { symbol: "NTPC", ticker: "NTPC.NS", sector: "Power" },
-    { symbol: "TITAN", ticker: "TITAN.NS", sector: "Consumer Durables" },
-    { symbol: "AXISBANK", ticker: "AXISBANK.NS", sector: "Financial Services" },
-    { symbol: "ONGC", ticker: "ONGC.NS", sector: "Energy" },
-    { symbol: "POWERGRID", ticker: "POWERGRID.NS", sector: "Power" },
-    { symbol: "TATASTEEL", ticker: "TATASTEEL.NS", sector: "Metals & Mining" },
-    { symbol: "M&M", ticker: "M&M.NS", sector: "Automobile" },
-    { symbol: "ASIANPAINT", ticker: "ASIANPAINT.NS", sector: "Consumer Durables" },
-    { symbol: "ULTRACEMCO", ticker: "ULTRACEMCO.NS", sector: "Construction Materials" },
-    { symbol: "BAJAJFINSV", ticker: "BAJAJFINSV.NS", sector: "Financial Services" },
-    { symbol: "NESTLEIND", ticker: "NESTLEIND.NS", sector: "FMCG" },
-    { symbol: "TECHM", ticker: "TECHM.NS", sector: "Information Technology" },
-    { symbol: "JSWSTEEL", ticker: "JSWSTEEL.NS", sector: "Metals & Mining" },
-    { symbol: "DIXON", ticker: "DIXON.NS", sector: "Consumer Durables" },
-    { symbol: "NIACL", ticker: "NIACL.NS", sector: "Financial Services" },
-    { symbol: "DLF", ticker: "DLF.NS", sector: "Realty" },
-    { symbol: "ETERNAL", ticker: "ETERNAL.NS", sector: "Consumer Services" },
-    { symbol: "MOTILALOFS", ticker: "MOTILALOFS.NS", sector: "Financial Services" },
-    { symbol: "GODREJPROP", ticker: "GODREJPROP.NS", sector: "Realty" },
-    { symbol: "POLICYBZR", ticker: "POLICYBZR.NS", sector: "Financial Services" },
-    { symbol: "PRESTIGE", ticker: "PRESTIGE.NS", sector: "Realty" },
-    { symbol: "INDHOTEL", ticker: "INDHOTEL.NS", sector: "Consumer Services" },
-    { symbol: "CRISIL", ticker: "CRISIL.NS", sector: "Financial Services" },
-    { symbol: "OBEROIRLTY", ticker: "OBEROIRLTY.NS", sector: "Realty" },
-    { symbol: "GRASIM", ticker: "GRASIM.NS", sector: "Construction Materials" },
-    { symbol: "BPCL", ticker: "BPCL.NS", sector: "Energy" },
-    { symbol: "PETRONET", ticker: "PETRONET.NS", sector: "Energy" },
-    { symbol: "BHEL", ticker: "BHEL.NS", sector: "Capital Goods" },
-    { symbol: "PNB", ticker: "PNB.NS", sector: "Financial Services" },
-    { symbol: "IDBI", ticker: "IDBI.NS", sector: "Financial Services" },
-    { symbol: "SAIL", ticker: "SAIL.NS", sector: "Metals & Mining" },
-    { symbol: "OIL", ticker: "OIL.NS", sector: "Energy" },
-    { symbol: "JINDALSTEL", ticker: "JINDALSTEL.NS", sector: "Metals & Mining" },
-    { symbol: "MAHABANK", ticker: "MAHABANK.NS", sector: "Financial Services" },
-    { symbol: "APLAPOLLO", ticker: "APLAPOLLO.NS", sector: "Capital Goods" },
-    { symbol: "INDIANB", ticker: "INDIANB.NS", sector: "Financial Services" },
-    { symbol: "UNIONBANK", ticker: "UNIONBANK.NS", sector: "Financial Services" }
-];
+*(Note: **HEROMOTOCO** (~₹5,300), **BRITANNIA** (~₹5,120), **CUMMINSIND** (~₹5,040), **INTERGLOBE** (~₹5,000), aur **TITAN** (~₹5,000) ₹5,500 ke strict limit ke andar fit ho jate hain, isliye inhein retain kiya ja sakta hai).*
 
-# 2
-List 2
-Symbol
-DIXON
-NIACL
-DLF
-ETERNAL
-MOTILALOFS
-GODREJPROP
-POLICYBZR
-PRESTIGE
-INDHOTEL
-CRISIL
-OBEROIRLTY
-KOTAKBANK
-GRASIM
-BPCL
-PETRONET
-BHEL
-PNB
-IDBI
-SAIL
-OIL
-JINDALSTEL
-MAHABANK
-APLAPOLLO
-INDIANB
-UNIONBANK
-List 1
-RELIANCE
-TCS
-HDFCBANK
-ICICIBANK
-BHARTIARTL
-INFY
-SBIN
-ITC
-HINDUNILVR
-LT
-BAJFINANCE
-HCLTECH
-MARUTI
-SUNPHARMA
-ADANIENT
-CHOLAFIN
-NTPC
-TITAN
-AXISBANK
-ONGC
-POWERGRID
-TATASTEEL
-M&M
-ASIANPAINT
-ULTRACEMCO
-BAJAJFINSV
-NESTLEIND
-TECHM
-JSWSTEEL
+---
 
-# 1 
-Required format
-Symbol	    Yahoo Ticker	Active	Sector	
-RELIANCE	RELIANCE.NS	    YES	    Energy	
-Need help in fetching details on below listed stocks in above mentioned format
-Source Stocks:
-DIXON
-NIACL
-DLF
-ETERNAL
-MOTILALOFS
-GODREJPROP
-POLICYBZR
-PRESTIGE
-INDHOTEL
-CRISIL
-OBEROIRLTY
-KOTAKBANK
-GRASIM
-BPCL
-PETRONET
-BHEL
-PNB
-IDBI
-SAIL
-OIL
-JINDALSTEL
-MAHABANK
-APLAPOLLO
-INDIANB
-UNIONBANK
+### Implementation Steps
+
+#### 1. `src/Config.js` Update
+
+`MASTER_UNIVERSE_100` array mein upar diye gaye 13 symbols ko unke respective replacement ticker aur symbol se swap kar lijiye.
+
+#### 2. `WATCHLIST` Sheet Tab Update
+
+Google Sheet ke `WATCHLIST` tab mein jaakar unhi rows par:
+
+* Symbol
+* Company Name
+* Yahoo Ticker (`.NS`)
+replace kar lijiye.
+
+#### 3. Safety Guard in `Config.js` (Optional Backup)
+
+Kisi bhi unexpected price surge se bachne ke liye `CONFIG` object mein ek cap add kar lijiye:
+
+```javascript
+MAX_SHARE_PRICE: 5500,
+
+```
+
+Aur `SignalEngine.js` mein candidate push hone se pehle ek guard laga dijiye:
+
+```javascript
+if (cmp > CONFIG.MAX_SHARE_PRICE) {
+  finalSignal = "SKIPPED_PRICE";
+  reason = `CMP ₹${cmp} exceeds max unit slot limit ₹${CONFIG.MAX_SHARE_PRICE}`;
+}
+
+```
+
+Isse aapka universe 100 stocks ka complete rahega aur koi bhi trade aapke capital rules ko break nahi karega.
