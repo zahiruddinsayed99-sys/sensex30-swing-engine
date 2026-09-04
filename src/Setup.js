@@ -59,24 +59,29 @@ function initWatchlistTab(ss) {
   if (!sheet) sheet = ss.insertSheet("WATCHLIST");
   sheet.clear();
 
-  const headers = ["Symbol", "Company Name", "Yahoo Ticker", "Tier", "Active (YES/NO)"];
+  const headers = ["Symbol", "Yahoo Ticker", "Active", "Sector", "Universe", "Universe As Of", "Universe Version"];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
     .setFontWeight("bold").setBackground("#2d3748").setFontColor("#ffffff");
 
+  const todayStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd");
   const rows = MASTER_UNIVERSE_100.map(c => [
     c.symbol,
-    c.name,
     c.ticker,
+    "YES",
+    c.name,
     c.tier,
-    "YES"
+    todayStr,
+    "V2.0"
   ]);
 
   sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
   sheet.setColumnWidth(1, 130);
-  sheet.setColumnWidth(2, 240);
-  sheet.setColumnWidth(3, 150);
-  sheet.setColumnWidth(4, 130);
-  sheet.setColumnWidth(5, 130);
+  sheet.setColumnWidth(2, 150);
+  sheet.setColumnWidth(3, 90);
+  sheet.setColumnWidth(4, 220);
+  sheet.setColumnWidth(5, 120);
+  sheet.setColumnWidth(6, 120);
+  sheet.setColumnWidth(7, 120);
 }
 
 function initSettingsTab(ss) {
@@ -84,24 +89,24 @@ function initSettingsTab(ss) {
   if (!sheet) sheet = ss.insertSheet("SETTINGS");
   sheet.clear();
 
-  const headers = ["Parameter", "Value", "Description"];
-  sheet.getRange(1, 1, 1, 3).setValues([headers])
+  const headers = ["Key", "Value", "Description", "Type"];
+  sheet.getRange(1, 1, 1, 4).setValues([headers])
     .setFontWeight("bold").setBackground("#2d3748").setFontColor("#ffffff");
 
   const settingsData = [
-    ["Cycle Capital", CONFIG.CYCLE_CAPITAL, "Total pool capital for one full cycle (INR)"],
-    ["Total Slots", CONFIG.TOTAL_CYCLE_SLOTS, "Total tranche slots across all positions"],
-    ["Slot Size", CONFIG.SLOT_SIZE, "Capital deployed per tranche (INR)"],
-    ["Max Distinct Stocks", CONFIG.MAX_DISTINCT_STOCKS, "Maximum portfolio breadth (names)"],
-    ["Scanning Universe Mode", UNIVERSE_MODES.SENSEX_30, "Active Scanning Scope (Dropdown)"],
-    ["Consolidated Target %", CONFIG.BASKET_TARGET_PERCENT, "Combined gain exit trigger (+6.5%)"],
-    ["Quarantine Drawdown %", CONFIG.QUARANTINE_THRESHOLD_PERCENT, "Drawdown limit to freeze averaging (-20%)"],
-    ["Daily Buy Order Limit", CONFIG.DAILY_BUY_LIMIT, "Max orders queued per session (5)"],
-    ["Minimum Dip %", CONFIG.DIP_THRESHOLD_PERCENT, "Decline from 30-day reference high (5%)"],
-    ["Reference High Lookback", 30, "Lookback window for reference high (days)"]
+    ["CYCLE_CAPITAL", CONFIG.CYCLE_CAPITAL, "Total pool capital for one full cycle (INR)", "NUMBER"],
+    ["TOTAL_SLOTS", CONFIG.TOTAL_CYCLE_SLOTS, "Total tranche slots across all positions", "NUMBER"],
+    ["SLOT_SIZE", CONFIG.SLOT_SIZE, "Capital deployed per tranche (INR)", "NUMBER"],
+    ["MAX_DISTINCT_STOCKS", CONFIG.MAX_DISTINCT_STOCKS, "Maximum portfolio breadth (names)", "NUMBER"],
+    ["SCANNING_UNIVERSE_MODE", UNIVERSE_MODES.SENSEX_30, "Active Scanning Scope (Dropdown)", "STRING"],
+    ["CONSOLIDATED_TARGET_PCT", CONFIG.BASKET_TARGET_PERCENT, "Combined gain exit trigger (+6.5%)", "PERCENT"],
+    ["QUARANTINE_PCT", CONFIG.QUARANTINE_THRESHOLD_PERCENT, "Drawdown limit to freeze averaging (-20%)", "PERCENT"],
+    ["DAILY_BUY_LIMIT", CONFIG.DAILY_BUY_LIMIT, "Max orders queued per session (5)", "NUMBER"],
+    ["DIP_MIN_PCT", CONFIG.DIP_THRESHOLD_PERCENT, "Decline from 30-day reference high (5%)", "PERCENT"],
+    ["REFERENCE_HIGH_LOOKBACK", 30, "Lookback window for reference high (days)", "NUMBER"]
   ];
 
-  sheet.getRange(2, 1, settingsData.length, 3).setValues(settingsData);
+  sheet.getRange(2, 1, settingsData.length, 4).setValues(settingsData);
 
   const rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(Object.values(UNIVERSE_MODES), true)
@@ -109,7 +114,8 @@ function initSettingsTab(ss) {
     .build();
   sheet.getRange("B6").setDataValidation(rule);
 
-  sheet.setColumnWidth(1, 220);
+  sheet.setColumnWidth(1, 240);
   sheet.setColumnWidth(2, 260);
   sheet.setColumnWidth(3, 380);
+  sheet.setColumnWidth(4, 120);
 }

@@ -180,7 +180,7 @@ function getActiveConstituents() {
     const activeTickers = [];
     for (let r = 1; r < watchData.length; r++) {
       const sym = watchData[r][0];
-      const isEnabled = watchData[r][4];
+      const isEnabled = watchData[r][2]; // Column C: 'Active'
       if (isEnabled === "YES" || isEnabled === true) {
         const found = MASTER_UNIVERSE_100.find(c => c.symbol === sym);
         if (found) activeTickers.push(found);
