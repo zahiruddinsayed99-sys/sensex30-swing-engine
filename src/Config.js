@@ -112,7 +112,7 @@ const MASTER_UNIVERSE_100 = [
   { symbol: "VEDL", name: "Vedanta Ltd", ticker: "VEDL.NS", tier: "NEXT_30" },
   { symbol: "ETERNAL", name: "Eternal (Zomato) Ltd", ticker: "ETERNAL.NS", tier: "NEXT_30" },
 
-  // --- TIER 3: BSE 100 EXTENDED LEADERS (Next 40) ---
+  // --- TIER 3: BSE 100 EXTENDED LEADERS (Top 40) ---
   { symbol: "ADANIPORTS", name: "Adani Ports & SEZ", ticker: "ADANIPORTS.NS", tier: "TOP_40" },
   { symbol: "BPCL", name: "Bharat Petroleum", ticker: "BPCL.NS", tier: "TOP_40" },
   { symbol: "IOC", name: "Indian Oil Corp", ticker: "IOC.NS", tier: "TOP_40" },
@@ -133,7 +133,7 @@ const MASTER_UNIVERSE_100 = [
   { symbol: "INTERGLOBE", name: "InterGlobe Aviation (IndiGo)", ticker: "INDIGO.NS", tier: "TOP_40" },
   { symbol: "POLYCAB", name: "Polycab India", ticker: "POLYCAB.NS", tier: "TOP_40" },
   { symbol: "PERSISTENT", name: "Persistent Systems", ticker: "PERSISTENT.NS", tier: "TOP_40" },
-  { symbol: "LTIM", name: "LTIMindtree", ticker: "LTIM.BO", tier: "TOP_40" },
+  { symbol: "LTIM", name: "LTIMindtree", ticker: "540005.BO", tier: "TOP_40" },
   { symbol: "MPHASIS", name: "Mphasis Ltd", ticker: "MPHASIS.NS", tier: "TOP_40" },
   { symbol: "COFORGE", name: "Coforge Ltd", ticker: "COFORGE.NS", tier: "TOP_40" },
   { symbol: "COLPAL", name: "Colgate-Palmolive", ticker: "COLPAL.NS", tier: "TOP_40" },
@@ -142,7 +142,7 @@ const MASTER_UNIVERSE_100 = [
   { symbol: "ICICIPRULI", name: "ICICI Prudential Life", ticker: "ICICIPRULI.NS", tier: "TOP_40" },
   { symbol: "ICICIGI", name: "ICICI Lombard", ticker: "ICICIGI.NS", tier: "TOP_40" },
   { symbol: "MUTHOOTFIN", name: "Muthoot Finance", ticker: "MUTHOOTFIN.NS", tier: "TOP_40" },
-  { symbol: "BAJAJHLDNG", name: "Bajaj Holdings", ticker: "BAJAJHLDNG.NS", tier: "TOP_40" },
+  { symbol: "BAJAJHLDNG", name: "Bajaj Holdings & Inv", ticker: "BAJAJHLDNG.NS", tier: "TOP_40" },
   { symbol: "LODHA", name: "Macrotech Developers (Lodha)", ticker: "LODHA.NS", tier: "TOP_40" },
   { symbol: "GODREJPROP", name: "Godrej Properties", ticker: "GODREJPROP.NS", tier: "TOP_40" },
   { symbol: "OBEROIRLTY", name: "Oberoi Realty", ticker: "OBEROIRLTY.NS", tier: "TOP_40" },

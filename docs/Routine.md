@@ -1,61 +1,107 @@
-Agar per-slot budget **₹4,000 se max ₹5,500** hai, toh **Solution 2 (Heavy Outliers ko Liquid Bluechips se swap karna)** bilkul right approach hai.
+const MASTER_UNIVERSE_100 = [
+  // --- TIER 1: SENSEX 30 (Core) ---
+  { symbol: "RELIANCE", name: "Reliance Industries", ticker: "RELIANCE.NS", tier: "SENSEX_30" },
+  { symbol: "TCS", name: "Tata Consultancy Services", ticker: "TCS.NS", tier: "SENSEX_30" },
+  { symbol: "HDFCBANK", name: "HDFC Bank", ticker: "HDFCBANK.NS", tier: "SENSEX_30" },
+  { symbol: "ICICIBANK", name: "ICICI Bank", ticker: "ICICIBANK.NS", tier: "SENSEX_30" },
+  { symbol: "INFY", name: "Infosys", ticker: "INFY.NS", tier: "SENSEX_30" },
+  { symbol: "BHARTIARTL", name: "Bharti Airtel", ticker: "BHARTIARTL.NS", tier: "SENSEX_30" },
+  { symbol: "ITC", name: "ITC Ltd", ticker: "ITC.NS", tier: "SENSEX_30" },
+  { symbol: "SBIN", name: "State Bank of India", ticker: "SBIN.NS", tier: "SENSEX_30" },
+  { symbol: "LT", name: "Larsen & Toubro", ticker: "LT.NS", tier: "SENSEX_30" },
+  { symbol: "HINDUNILVR", name: "Hindustan Unilever", ticker: "HINDUNILVR.NS", tier: "SENSEX_30" },
+  { symbol: "AXISBANK", name: "Axis Bank", ticker: "AXISBANK.NS", tier: "SENSEX_30" },
+  { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank", ticker: "KOTAKBANK.NS", tier: "SENSEX_30" },
+  { symbol: "BAJFINANCE", name: "Bajaj Finance", ticker: "BAJFINANCE.NS", tier: "SENSEX_30" },
+  { symbol: "TATAMOTORS", name: "Tata Motors", ticker: "TATAMOTORS.NS", tier: "SENSEX_30" },
+  { symbol: "M&M", name: "Mahindra & Mahindra", ticker: "M&M.NS", tier: "SENSEX_30" },
+  { symbol: "SUNPHARMA", name: "Sun Pharma", ticker: "SUNPHARMA.NS", tier: "SENSEX_30" },
+  { symbol: "HCLTECH", name: "HCL Technologies", ticker: "HCLTECH.NS", tier: "SENSEX_30" },
+  { symbol: "TITAN", name: "Titan Company", ticker: "TITAN.NS", tier: "SENSEX_30" },
+  { symbol: "NTPC", name: "NTPC Ltd", ticker: "NTPC.NS", tier: "SENSEX_30" },
+  { symbol: "POWERGRID", name: "Power Grid Corp", ticker: "POWERGRID.NS", tier: "SENSEX_30" },
+  { symbol: "GRASIM", name: "Grasim Industries", ticker: "GRASIM.NS", tier: "SENSEX_30" },
+  { symbol: "TATASTEEL", name: "Tata Steel", ticker: "TATASTEEL.NS", tier: "SENSEX_30" },
+  { symbol: "ASIANPAINT", name: "Asian Paints", ticker: "ASIANPAINT.NS", tier: "SENSEX_30" },
+  { symbol: "TECHM", name: "Tech Mahindra", ticker: "TECHM.NS", tier: "SENSEX_30" },
+  { symbol: "INDUSINDBK", name: "IndusInd Bank", ticker: "INDUSINDBK.NS", tier: "SENSEX_30" },
+  { symbol: "BAJAJFINSV", name: "Bajaj Finserv", ticker: "BAJAJFINSV.NS", tier: "SENSEX_30" },
+  { symbol: "NESTLEIND", name: "Nestle India", ticker: "NESTLEIND.NS", tier: "SENSEX_30" },
+  { symbol: "JSWSTEEL", name: "JSW Steel", ticker: "JSWSTEEL.NS", tier: "SENSEX_30" },
+  { symbol: "TATACONSUM", name: "Tata Consumer Products", ticker: "TATACONSUM.NS", tier: "SENSEX_30" },
+  { symbol: "CHOLAFIN", name: "Cholamandalam Inv & Fin", ticker: "CHOLAFIN.NS", tier: "SENSEX_30" },
 
-Isse portfolio allocation balanced rahega aur koi bhi single stock pure capital ko block nahi karega.
+  // --- TIER 2: SENSEX NEXT 30 ---
+  { symbol: "ADANIENT", name: "Adani Enterprises", ticker: "ADANIENT.NS", tier: "NEXT_30" },
+  { symbol: "TVSMOTOR", name: "TVS Motor Company", ticker: "TVSMOTOR.NS", tier: "NEXT_30" },
+  { symbol: "HAL", name: "Hindustan Aeronautics", ticker: "HAL.NS", tier: "NEXT_30" },
+  { symbol: "ONGC", name: "Oil & Natural Gas Corp", ticker: "ONGC.NS", tier: "NEXT_30" },
+  { symbol: "COALINDIA", name: "Coal India", ticker: "COALINDIA.NS", tier: "NEXT_30" },
+  { symbol: "SHRIRAMFIN", name: "Shriram Finance", ticker: "SHRIRAMFIN.NS", tier: "NEXT_30" },
+  { symbol: "CIPLA", name: "Cipla Ltd", ticker: "CIPLA.NS", tier: "NEXT_30" },
+  { symbol: "HINDALCO", name: "Hindalco Industries", ticker: "HINDALCO.NS", tier: "NEXT_30" },
+  { symbol: "AMBUJACEM", name: "Ambuja Cements", ticker: "AMBUJACEM.NS", tier: "NEXT_30" },
+  { symbol: "ASHOKLEY", name: "Ashok Leyland", ticker: "ASHOKLEY.NS", tier: "NEXT_30" },
+  { symbol: "MOTHERSON", name: "Samvardhana Motherson", ticker: "MOTHERSON.NS", tier: "NEXT_30" },
+  { symbol: "WIPRO", name: "Wipro Ltd", ticker: "WIPRO.NS", tier: "NEXT_30" },
+  { symbol: "SBILIFE", name: "SBI Life Insurance", ticker: "SBILIFE.NS", tier: "NEXT_30" },
+  { symbol: "JIOFIN", name: "Jio Financial Services", ticker: "JIOFIN.NS", tier: "NEXT_30" },
+  { symbol: "VBL", name: "Varun Beverages", ticker: "VBL.NS", tier: "NEXT_30" },
+  { symbol: "MAXHEALTH", name: "Max Healthcare", ticker: "MAXHEALTH.NS", tier: "NEXT_30" },
+  { symbol: "BRITANNIA", name: "Britannia Industries", ticker: "BRITANNIA.NS", tier: "NEXT_30" },
+  { symbol: "TATAPOWER", name: "Tata Power", ticker: "TATAPOWER.NS", tier: "NEXT_30" },
+  { symbol: "HDFCLIFE", name: "HDFC Life Insurance", ticker: "HDFCLIFE.NS", tier: "NEXT_30" },
+  { symbol: "HEROMOTOCO", name: "Hero MotoCorp", ticker: "HEROMOTOCO.NS", tier: "NEXT_30" },
+  { symbol: "INDHOTEL", name: "Indian Hotels Co", ticker: "INDHOTEL.NS", tier: "NEXT_30" },
+  { symbol: "DRREDDY", name: "Dr Reddys Laboratories", ticker: "DRREDDY.NS", tier: "NEXT_30" },
+  { symbol: "BEL", name: "Bharat Electronics", ticker: "BEL.NS", tier: "NEXT_30" },
+  { symbol: "PIDILITIND", name: "Pidilite Industries", ticker: "PIDILITIND.NS", tier: "NEXT_30" },
+  { symbol: "GAIL", name: "GAIL India", ticker: "GAIL.NS", tier: "NEXT_30" },
+  { symbol: "VEDL", name: "Vedanta Ltd", ticker: "VEDL.NS", tier: "NEXT_30" },
+  { symbol: "ETERNAL", name: "Eternal (Zomato) Ltd", ticker: "ETERNAL.NS", tier: "NEXT_30" },
+  { symbol: "HAVELLS", name: "Havells India", ticker: "HAVELLS.NS", tier: "NEXT_30" },
+  { symbol: "COFORGE", name: "Coforge Ltd", ticker: "COFORGE.NS", tier: "NEXT_30" },
+  { symbol: "MPHASIS", name: "Mphasis Ltd", ticker: "MPHASIS.NS", tier: "NEXT_30" },
 
-Aapke list mein se jo stocks ₹5,500 ki upper boundary ko cross karte hain, unka exact 1-to-1 sector-matched alternate mapping yeh raha:
-
-| High-Priced Stock (Remove) | CMP (Approx) | Sector | 1-to-1 Bluechip Replacement (Add) | Yahoo Ticker | Alternate CMP |
-| --- | --- | --- | --- | --- | --- |
-| **MRF** | ₹1,29,990 | Auto Ancillary / Tyres | **APOLLOTYRE** | `APOLLOTYRE.NS` | ~₹450 - ₹520 |
-| **BOSCHLTD** | ₹46,800 | Auto Ancillary | **MOTHERSON** (SAMIL) | `MOTHERSON.NS` | ~₹160 - ₹200 |
-| **SHREECEM** | ₹23,980 | Cement | **AMBUJACEM** | `AMBUJACEM.NS` | ~₹550 - ₹650 |
-| **MARUTI** | ₹12,690 | Auto (4-Wheelers) | **TATAMOTORS** | `TATAMOTORS.NS` | ~₹950 - ₹1,100 |
-| **BAJAJ-AUTO** | ₹11,911 | Auto (2-Wheelers) | **TVSMOTOR** | `TVSMOTOR.NS` | ~₹2,400 - ₹2,800 |
-| **ULTRACEMCO** | ₹11,397 | Cement | **GRASIM** | `GRASIM.NS` | ~₹2,500 - ₹2,800 |
-| **BAJAJHLDNG** | ₹11,157 | Finance / Holding | **CHOLAFIN** | `CHOLAFIN.NS` | ~₹1,400 - ₹1,600 |
-| **DIVISLAB** | ₹9,142 | Pharma / API | **CIPLA** | `CIPLA.NS` | ~₹1,500 - ₹1,650 |
-| **APOLLOHOSP** | ₹8,662 | Healthcare / Hospitals | **MAXHEALTH** | `MAXHEALTH.NS` | ~₹900 - ₹1,050 |
-| **POLYCAB** | ₹8,290 | Cables & Electricals | **HAVELLS** | `HAVELLS.NS` | ~₹1,700 - ₹1,900 |
-| **EICHERMOT** | ₹7,629 | Auto | **ASHOKLEY** | `ASHOKLEY.NS` | ~₹210 - ₹250 |
-| **ABB** | ₹7,436 | Capital Goods / Engineering | **SIEMENS** / **BEL** | `BEL.NS` | ~₹280 - ₹320 |
-| **PERSISTENT** | ₹5,652 | Mid-cap IT | **COFORGE** / **MPHASIS** | `MPHASIS.NS` | ~₹2,800 - ₹3,100 |
-
-*(Note: **HEROMOTOCO** (~₹5,300), **BRITANNIA** (~₹5,120), **CUMMINSIND** (~₹5,040), **INTERGLOBE** (~₹5,000), aur **TITAN** (~₹5,000) ₹5,500 ke strict limit ke andar fit ho jate hain, isliye inhein retain kiya ja sakta hai).*
-
----
-
-### Implementation Steps
-
-#### 1. `src/Config.js` Update
-
-`MASTER_UNIVERSE_100` array mein upar diye gaye 13 symbols ko unke respective replacement ticker aur symbol se swap kar lijiye.
-
-#### 2. `WATCHLIST` Sheet Tab Update
-
-Google Sheet ke `WATCHLIST` tab mein jaakar unhi rows par:
-
-* Symbol
-* Company Name
-* Yahoo Ticker (`.NS`)
-replace kar lijiye.
-
-#### 3. Safety Guard in `Config.js` (Optional Backup)
-
-Kisi bhi unexpected price surge se bachne ke liye `CONFIG` object mein ek cap add kar lijiye:
-
-```javascript
-MAX_SHARE_PRICE: 5500,
-
-```
-
-Aur `SignalEngine.js` mein candidate push hone se pehle ek guard laga dijiye:
-
-```javascript
-if (cmp > CONFIG.MAX_SHARE_PRICE) {
-  finalSignal = "SKIPPED_PRICE";
-  reason = `CMP ₹${cmp} exceeds max unit slot limit ₹${CONFIG.MAX_SHARE_PRICE}`;
-}
-
-```
-
-Isse aapka universe 100 stocks ka complete rahega aur koi bhi trade aapke capital rules ko break nahi karega.
+  // --- TIER 3: BSE 100 EXTENDED LEADERS (Top 40) ---
+  { symbol: "ADANIPORTS", name: "Adani Ports & SEZ", ticker: "ADANIPORTS.NS", tier: "TOP_40" },
+  { symbol: "BPCL", name: "Bharat Petroleum", ticker: "BPCL.NS", tier: "TOP_40" },
+  { symbol: "IOC", name: "Indian Oil Corp", ticker: "IOC.NS", tier: "TOP_40" },
+  { symbol: "SIEMENS", name: "Siemens India", ticker: "SIEMENS.NS", tier: "TOP_40" },
+  { symbol: "DLF", name: "DLF Ltd", ticker: "DLF.NS", tier: "TOP_40" },
+  { symbol: "GODREJCP", name: "Godrej Consumer Products", ticker: "GODREJCP.NS", tier: "TOP_40" },
+  { symbol: "DABUR", name: "Dabur India", ticker: "DABUR.NS", tier: "TOP_40" },
+  { symbol: "BANKBARODA", name: "Bank of Baroda", ticker: "BANKBARODA.NS", tier: "TOP_40" },
+  { symbol: "PNB", name: "Punjab National Bank", ticker: "PNB.NS", tier: "TOP_40" },
+  { symbol: "CANBK", name: "Canara Bank", ticker: "CANBK.NS", tier: "TOP_40" },
+  { symbol: "PFC", name: "Power Finance Corp", ticker: "PFC.NS", tier: "TOP_40" },
+  { symbol: "RECLTD", name: "REC Ltd", ticker: "RECLTD.NS", tier: "TOP_40" },
+  { symbol: "IRFC", name: "Indian Railway Finance", ticker: "IRFC.NS", tier: "TOP_40" },
+  { symbol: "TRENT", name: "Trent Ltd", ticker: "TRENT.NS", tier: "TOP_40" },
+  { symbol: "INTERGLOBE", name: "InterGlobe Aviation (IndiGo)", ticker: "INDIGO.NS", tier: "TOP_40" },
+  { symbol: "LTIM", name: "LTIMindtree", ticker: "LTIM.NS", tier: "TOP_40" },
+  { symbol: "COLPAL", name: "Colgate-Palmolive", ticker: "COLPAL.NS", tier: "TOP_40" },
+  { symbol: "MARICO", name: "Marico Ltd", ticker: "MARICO.NS", tier: "TOP_40" },
+  { symbol: "BERGEPAINT", name: "Berger Paints", ticker: "BERGEPAINT.NS", tier: "TOP_40" },
+  { symbol: "ICICIPRULI", name: "ICICI Prudential Life", ticker: "ICICIPRULI.NS", tier: "TOP_40" },
+  { symbol: "ICICIGI", name: "ICICI Lombard", ticker: "ICICIGI.NS", tier: "TOP_40" },
+  { symbol: "MUTHOOTFIN", name: "Muthoot Finance", ticker: "MUTHOOTFIN.NS", tier: "TOP_40" },
+  { symbol: "LODHA", name: "Macrotech Developers (Lodha)", ticker: "LODHA.NS", tier: "TOP_40" },
+  { symbol: "GODREJPROP", name: "Godrej Properties", ticker: "GODREJPROP.NS", tier: "TOP_40" },
+  { symbol: "OBEROIRLTY", name: "Oberoi Realty", ticker: "OBEROIRLTY.NS", tier: "TOP_40" },
+  { symbol: "ASTRAL", name: "Astral Ltd", ticker: "ASTRAL.NS", tier: "TOP_40" },
+  { symbol: "CUMMINSIND", name: "Cummins India", ticker: "CUMMINSIND.NS", tier: "TOP_40" },
+  { symbol: "BALKRISIND", name: "Balkrishna Industries", ticker: "BALKRISIND.NS", tier: "TOP_40" },
+  { symbol: "APOLLOTYRE", name: "Apollo Tyres", ticker: "APOLLOTYRE.NS", tier: "TOP_40" },
+  { symbol: "ADANIGREEN", name: "Adani Green Energy", ticker: "ADANIGREEN.NS", tier: "TOP_40" },
+  { symbol: "ADANIPOWER", name: "Adani Power", ticker: "ADANIPOWER.NS", tier: "TOP_40" },
+  { symbol: "ATGL", name: "Adani Total Gas", ticker: "ATGL.NS", tier: "TOP_40" },
+  { symbol: "NHPC", name: "NHPC Ltd", ticker: "NHPC.NS", tier: "TOP_40" },
+  { symbol: "LUPIN", name: "Lupin Ltd", ticker: "LUPIN.NS", tier: "TOP_40" },
+  { symbol: "TORNTPHARM", name: "Torrent Pharmaceuticals", ticker: "TORNTPHARM.NS", tier: "TOP_40" },
+  { symbol: "ZYDUSLIFE", name: "Zydus Lifesciences", ticker: "ZYDUSLIFE.NS", tier: "TOP_40" },
+  { symbol: "JUBLFOOD", name: "Jubilant FoodWorks", ticker: "JUBLFOOD.NS", tier: "TOP_40" },
+  { symbol: "SRF", name: "SRF Ltd", ticker: "SRF.NS", tier: "TOP_40" },
+  { symbol: "BHEL", name: "Bharat Heavy Electricals", ticker: "BHEL.NS", tier: "TOP_40" },
+  { symbol: "NMDC", name: "NMDC Ltd", ticker: "NMDC.NS", tier: "TOP_40" }
+];
