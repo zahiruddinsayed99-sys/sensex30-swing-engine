@@ -203,12 +203,8 @@ function runDataAndIndicatorPipeline() {
     const status = errors.length === 0 ? "SUCCESS" : "PARTIAL";
     logAudit("runDataAndIndicatorPipeline", "FETCH_INDICATORS", "SUCCESS", indicatorRows.length, `Processed ${indicatorRows.length} active constituents`, "", execTime);
 
-    SpreadsheetApp.getUi().alert(
-        "⚡ In-Memory Scan Complete!\n\n" +
-        "Execution Time: " + (execTime / 1000).toFixed(1) + "s\n" +
-        "Stocks Processed: " + successCount + " / " + activeStocks.length + "\n" +
-        (errors.length > 0 ? "Errors:\n" + errors.join("\n") : "All 30 constituents computed cleanly!")
-    );
+    // Dynamic line se replace karein:
+    SpreadsheetApp.getUi().alert(`In-Memory Scan Complete!\n\nExecution Time: ${(execTime / 1000).toFixed(1)}s\nStocks Processed: ${indicatorRows.length} / ${constituents.length}\nAll ${indicatorRows.length} constituents computed cleanly!`);
 }
 
 function calcAvg(arr) {

@@ -58,7 +58,7 @@ function generateHinglishVerdictReport() {
     if (finalSig.toString().startsWith("BUY")) {
       hinglishExplanation = "✅ Green Flag! Trend strong hai, 5% ka badhiya discount mila, recovery shuru ho chuki hai, aur stock ne 20 DMA + VWAP dono ko reclaim kar liya hai.";
       actionGuide = "Kal 09:45 AM - 11:00 AM window me Zerodha me ₹4,000 slot ka order place karein.";
-    } 
+    }
     // 2. WAIT_RECLAIM
     else if (finalSig === "WAIT_RECLAIM") {
       if (dma20Rec === "FAIL" && vwapRec === "FAIL") {
@@ -69,12 +69,12 @@ function generateHinglishVerdictReport() {
         hinglishExplanation = "⏳ 20 DMA toh paar kar liya, par intraday benchmark (VWAP) ke neeche close hua hai.";
       }
       actionGuide = "Radar par rakhein. Kal agar breakout deta hai toh signal generate ho sakta hai.";
-    } 
+    }
     // 3. WAIT_RECOVERY
     else if (finalSig === "WAIT_RECOVERY") {
       hinglishExplanation = "🔪 Falling Knife! Stock 5% se zyada gir chuka hai, par abhi tak sambhla nahi hai (koi recovery sign nahi mila).";
       actionGuide = "Bilkul hath na lagayein! Jab tak bottom ban kar curve upar na ghume, wait karein.";
-    } 
+    }
     // 4. MAXED or QUARANTINED
     else if (finalSig === "MAXED") {
       hinglishExplanation = "🛑 Slot Full! Is stock ke 5 tranches (₹20,000 max) poore ho chuke hain.";
@@ -82,7 +82,7 @@ function generateHinglishVerdictReport() {
     } else if (finalSig === "QUARANTINED") {
       hinglishExplanation = "⚠️ Red Alert! Position -20% se zyada down hai. System ne isme loss averaging freeze kar di hai.";
       actionGuide = "Capital safe rakhne ke liye averaging band hai. Position hold rahegi.";
-    } 
+    }
     // 5. NO_ACTION
     else {
       if (trend === "FAIL" && dip === "FAIL") {

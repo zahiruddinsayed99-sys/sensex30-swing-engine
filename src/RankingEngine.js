@@ -1,8 +1,9 @@
 /**
  * Ranking Engine — Implements:
  * 1. "Diversify First" priority rule (Fill up to 10 distinct names first, then average)
- * 2. Deterministic ranking without artificial tie-breakers
- * 3. Daily BUY limit of 5 candidates into ACTION_QUEUE
+ * 2. Tier Priority (SENSEX_30 > NEXT_30 > TOP_40)
+ * 3. Deterministic ranking without artificial tie-breakers
+ * 4. Daily BUY limit of 5 candidates into ACTION_QUEUE
  */
 
 function processRankingsAndActionQueue(candidates, allSignals, openPositionCount, execDateStr) {
@@ -11,19 +12,27 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
     const queueSheet = ss.getSheetByName("ACTION_QUEUE");
     const histSheet = ss.getSheetByName("SIGNAL_HISTORY");
 
+    if (!sigSheet || !queueSheet) {
+        SpreadsheetApp.getUi().alert("SIGNALS or ACTION_QUEUE sheet not found.");
+        return;
+    }
+
     if (candidates.length > 0) {
         candidates.sort((a, b) => {
-          if (openPositionCount < CONFIG.MAX_DISTINCT_STOCKS) {
-            if (a.candidateType === "NEW_NAME" && b.candidateType === "AVERAGING") return -1;
-            if (a.candidateType === "AVERAGING" && b.candidateType === "NEW_NAME") return 1;
-          }
+            // 1. Diversify First Rule
+            if (openPositionCount < CONFIG.MAX_DISTINCT_STOCKS) {
+                if (a.candidateType === "NEW_NAME" && b.candidateType === "AVERAGING") return -1;
+                if (a.candidateType === "AVERAGING" && b.candidateType === "NEW_NAME") return 1;
+            }
 
-          const tierWeights = { "SENSEX_30": 3, "NEXT_30": 2, "TOP_40": 1 };
-          const tierA = tierWeights[a.tier] || 1;
-          const tierB = tierWeights[b.tier] || 1;
-          if (tierA !== tierB) return tierB - tierA;
+            // 2. Tier Priority: SENSEX_30 > NEXT_30 > TOP_40
+            const tierWeights = { "SENSEX_30": 3, "NEXT_30": 2, "TOP_40": 1 };
+            const tierA = tierWeights[a.tier] || 1;
+            const tierB = tierWeights[b.tier] || 1;
+            if (tierA !== tierB) return tierB - tierA;
 
-          return b.rankScore - a.rankScore;
+            // 3. Technical Rank Score
+            return b.rankScore - a.rankScore;
         });
 
         let currentRank = 1;
@@ -72,6 +81,7 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         ];
     });
 
+    // Write to SIGNALS Tab
     if (sigSheet.getLastRow() > 1) {
         sigSheet.getRange(2, 1, sigSheet.getLastRow() - 1, sigSheet.getLastColumn()).clearContent();
     }
@@ -79,6 +89,7 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         sigSheet.getRange(2, 1, signalRows.length, signalRows[0].length).setValues(signalRows);
     }
 
+    // Populate ACTION_QUEUE (Top 5 Max Limit)
     const actionQueueRows = [];
     const topCandidates = candidates.slice(0, CONFIG.DAILY_BUY_LIMIT);
 
@@ -106,6 +117,7 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         queueSheet.getRange(2, 1, actionQueueRows.length, actionQueueRows[0].length).setValues(actionQueueRows);
     }
 
+    // Update SIGNAL_HISTORY
     if (topCandidates.length > 0 && histSheet) {
         const historyRows = topCandidates.map(c => [
             execDateStr,
@@ -124,11 +136,16 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         histSheet.getRange(histSheet.getLastRow() + 1, 1, historyRows.length, historyRows[0].length).setValues(historyRows);
     }
 
+    // Dynamic UI Alert (No hardcoding, no undefined variables)
+    const totalEvaluated = allSignals.length;
+    const qualifiedCount = candidates.length;
+    const queuedCount = topCandidates.length;
+
     SpreadsheetApp.getUi().alert(
-        "🎯 EOD Signal & Ranking Engine Complete!\n\n" +
-        "Total Candidates Evaluated: 30\n" +
-        "Qualified BUY Candidates: " + candidates.length + "\n" +
-        "Queued for Tomorrow's Action: " + topCandidates.length + " (Max 5 Limit)\n\n" +
-        "Review the 'SIGNALS' and 'ACTION_QUEUE' tabs."
+        `🎯 EOD Signal & Ranking Engine Complete!\n\n` +
+        `Total Candidates Evaluated: ${totalEvaluated}\n` +
+        `Qualified BUY Candidates: ${qualifiedCount}\n` +
+        `Queued for Tomorrow's Action: ${queuedCount} (Max 5 Limit)\n\n` +
+        `Review the 'SIGNALS' and 'ACTION_QUEUE' tabs.`
     );
 }

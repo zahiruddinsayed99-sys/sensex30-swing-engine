@@ -2,56 +2,56 @@
  * Master Setup Script — SENSEX 30 Basket Cycle Setup (In-Memory Engine)
  */
 function runPhase1Setup() {
-    const startTime = Date.now();
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const startTime = Date.now();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    try {
-        const targetSheets = Object.keys(SHEET_SCHEMAS);
-        targetSheets.forEach(sheetName => {
-            let sheet = ss.getSheetByName(sheetName);
-            if (!sheet) {
-                sheet = ss.insertSheet(sheetName);
-            }
-        });
+  try {
+    const targetSheets = Object.keys(SHEET_SCHEMAS);
+    targetSheets.forEach(sheetName => {
+      let sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        sheet = ss.insertSheet(sheetName);
+      }
+    });
 
-        // Remove obsolete MARKET_DATA or default Sheet1
-        ["MARKET_DATA", "Sheet1"].forEach(tabName => {
-            const obsolete = ss.getSheetByName(tabName);
-            if (obsolete && ss.getSheets().length > 1) {
-                try { ss.deleteSheet(obsolete); } catch (e) { }
-            }
-        });
+    // Remove obsolete MARKET_DATA or default Sheet1
+    ["MARKET_DATA", "Sheet1"].forEach(tabName => {
+      const obsolete = ss.getSheetByName(tabName);
+      if (obsolete && ss.getSheets().length > 1) {
+        try { ss.deleteSheet(obsolete); } catch (e) { }
+      }
+    });
 
-        // Apply clean table headers
-        targetSheets.forEach(sheetName => {
-            const sheet = ss.getSheetByName(sheetName);
-            const headers = SHEET_SCHEMAS[sheetName];
+    // Apply clean table headers
+    targetSheets.forEach(sheetName => {
+      const sheet = ss.getSheetByName(sheetName);
+      const headers = SHEET_SCHEMAS[sheetName];
 
-            if (headers.length > 0) {
-                sheet.clear();
-                sheet.getRange(1, 1, 1, headers.length).setValues([headers])
-                    .setFontWeight("bold")
-                    .setBackground("#1a365d")
-                    .setFontColor("#ffffff");
-                sheet.setFrozenRows(1);
-            }
-        });
+      if (headers.length > 0) {
+        sheet.clear();
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+          .setFontWeight("bold")
+          .setBackground("#1a365d")
+          .setFontColor("#ffffff");
+        sheet.setFrozenRows(1);
+      }
+    });
 
-        // Populate SETTINGS Tab
-        initSettingsTab(ss);
+    // Populate SETTINGS Tab
+    initSettingsTab(ss);
 
-        // Populate WATCHLIST Tab
-        initWatchlistTab(ss);
+    // Populate WATCHLIST Tab
+    initWatchlistTab(ss);
 
-        // Render Dashboard
-        renderDashboardLayout(ss.getSheetByName("DASHBOARD"));
+    // Render Dashboard
+    renderDashboardLayout(ss.getSheetByName("DASHBOARD"));
 
-        logAudit("runPhase1Setup", "SETUP_CLEAN_ENGINE", "SUCCESS", targetSheets.length, "Initialized 10 tabs with in-memory engine", "", Date.now() - startTime);
-        SpreadsheetApp.getUi().alert("Clean 10-tab architecture initialized successfully!");
-    } catch (err) {
-        logAudit("runPhase1Setup", "SETUP_CLEAN_ENGINE", "FAILED", 0, "", err.message, Date.now() - startTime);
-        SpreadsheetApp.getUi().alert("Setup failed: " + err.message);
-    }
+    logAudit("runPhase1Setup", "SETUP_CLEAN_ENGINE", "SUCCESS", targetSheets.length, "Initialized 10 tabs with in-memory engine", "", Date.now() - startTime);
+    SpreadsheetApp.getUi().alert("Clean 10-tab architecture initialized successfully!");
+  } catch (err) {
+    logAudit("runPhase1Setup", "SETUP_CLEAN_ENGINE", "FAILED", 0, "", err.message, Date.now() - startTime);
+    SpreadsheetApp.getUi().alert("Setup failed: " + err.message);
+  }
 }
 
 function initWatchlistTab(ss) {

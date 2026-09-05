@@ -1,5 +1,5 @@
 /**
- * Signal Engine — SENSEX 30 Basket Cycle Strategy
+ * Signal Engine — SENSEX Multi-Tier Basket Cycle Strategy
  * Evaluates Trend -> Dip (>=5%) -> CAR Recovery -> 20 DMA & VWAP Reclaim -> Tranche Eligibility
  */
 
@@ -19,6 +19,14 @@ function generateEODSignals() {
     if (indData.length < 2) {
         SpreadsheetApp.getUi().alert("INDICATORS sheet is empty. Run '3. Run EOD Scan' first.");
         return;
+    }
+
+    // Build Tier Lookup Map from MASTER_UNIVERSE_100
+    const tierMap = {};
+    if (typeof MASTER_UNIVERSE_100 !== "undefined") {
+        MASTER_UNIVERSE_100.forEach(item => {
+            tierMap[item.symbol] = item.tier;
+        });
     }
 
     // Load existing positions map: symbol -> { status, tranche, slotsUsed, basketStatus }
@@ -58,6 +66,7 @@ function generateEODSignals() {
         const [date, sym, cmp, dma20, dma20Prior, dma50, vwap, vol, avgVol, trend, dip, recovery, dma20Reclaim, vwapReclaim] = indData[i];
 
         const pos = positionMap[sym] || { status: "NONE", tranche: "T0", slots: 0, basketStatus: "ACTIVE" };
+        const stockTier = tierMap[sym] || "SENSEX_30";
 
         const isMaxed = pos.slots >= CONFIG.MAX_TRANCHES_PER_STOCK;
         const isQuarantined = pos.basketStatus === "QUARANTINED";
@@ -83,7 +92,10 @@ function generateEODSignals() {
         let finalSignal = "NO_ACTION";
         let reason = "Conditions not met";
 
-        if (isMaxed) {
+        if (cmp > CONFIG.MAX_SHARE_PRICE) {
+            finalSignal = "SKIPPED_PRICE";
+            reason = `CMP ₹${cmp} exceeds max unit slot limit ₹${CONFIG.MAX_SHARE_PRICE}`;
+        } else if (isMaxed) {
             finalSignal = "MAXED";
             reason = "Stock has reached maximum 5 tranches";
         } else if (isQuarantined) {
@@ -111,6 +123,7 @@ function generateEODSignals() {
 
             qualifiedCandidates.push({
                 symbol: sym,
+                tier: stockTier,
                 candidateType: candidateType,
                 currentTranche: pos.tranche,
                 nextTranche: nextTranche,
@@ -133,6 +146,7 @@ function generateEODSignals() {
             time: timeStr,
             execDate: execDateStr,
             symbol: sym,
+            tier: stockTier,
             candidateType: candidateType,
             currentTranche: pos.tranche,
             nextTranche: nextTranche,
@@ -156,7 +170,7 @@ function generateEODSignals() {
     processRankingsAndActionQueue(qualifiedCandidates, allSignalsLog, openPositionCount, execDateStr);
 
     const execTime = Date.now() - startTime;
-    logAudit("generateEODSignals", "GENERATE_SIGNALS", "SUCCESS", qualifiedCandidates.length, "Generated signals: " + qualifiedCandidates.length + " qualified BUY candidates", "", execTime);
+    logAudit("generateEODSignals", "GENERATE_SIGNALS", "SUCCESS", qualifiedCandidates.length, `Evaluated ${allSignalsLog.length} stocks | Generated ${qualifiedCandidates.length} qualified BUY candidates`, "", execTime);
 }
 
 /**
@@ -180,7 +194,8 @@ function runDailyEODJob() {
         // 2. Generate signals and rank top candidates into ACTION_QUEUE
         generateEODSignals();
 
-        logAudit("runDailyEODJob", "DAILY_EOD_JOB", "SUCCESS", 30, "Automated EOD scan & signal generation completed", "", 0);
+        const constituentsCount = typeof getActiveConstituents === "function" ? getActiveConstituents().length : 100;
+        logAudit("runDailyEODJob", "DAILY_EOD_JOB", "SUCCESS", constituentsCount, `Automated EOD scan & signal generation completed for ${constituentsCount} stocks`, "", 0);
     } catch (err) {
         logAudit("runDailyEODJob", "DAILY_EOD_JOB", "FAILED", 0, "Automated scan failed", err.message, 0);
     }
