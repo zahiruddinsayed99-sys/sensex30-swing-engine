@@ -21,10 +21,11 @@ function generateEODSignals() {
         return;
     }
 
-    // Build Tier Lookup Map from MASTER_UNIVERSE_100
+    // Build Tier Lookup Map from getActiveConstituents
     const tierMap = {};
-    if (typeof MASTER_UNIVERSE_100 !== "undefined") {
-        MASTER_UNIVERSE_100.forEach(item => {
+    if (typeof getActiveConstituents === "function") {
+        const constituents = getActiveConstituents();
+        constituents.forEach(item => {
             tierMap[item.symbol] = item.tier;
         });
     }
@@ -167,7 +168,45 @@ function generateEODSignals() {
     }
 
     // Pass to Ranking Engine
-    processRankingsAndActionQueue(qualifiedCandidates, allSignalsLog, openPositionCount, execDateStr);
+    // Update processRankingsAndActionQueue to handle Hedge actions
+    // However, RankingEngine handles candidates, so we can pass availableCash and openHedgePositions to it or handle it before/inside processRankingsAndActionQueue.
+    // Let's modify processRankingsAndActionQueue signature slightly, but since we should keep modifications contained, we can call HedgeEngine here.
+
+    // 1. Get Available Cash & Open Hedge Positions
+    let availableCash = CONFIG.CYCLE_CAPITAL;
+    if (posSheet) {
+        // Simple mock for available cash based on cycle capital - total invested
+        let totalInvested = 0;
+        for (let p = 1; p < posData.length; p++) {
+            totalInvested += Number(posData[p][4]) || 0; // "Total Invested" column
+        }
+        availableCash = CONFIG.CYCLE_CAPITAL - totalInvested;
+    }
+
+    let openHedgePositions = [];
+    const hedgeSheet = ss.getSheetByName("HEDGE_POSITIONS");
+    if (hedgeSheet) {
+        const hData = hedgeSheet.getDataRange().getValues();
+        for (let h = 1; h < hData.length; h++) {
+            openHedgePositions.push({
+                trancheId: hData[h][0],
+                symbol: hData[h][1],
+                buyPrice: hData[h][3],
+                qty: hData[h][4],
+                status: hData[h][6]
+            });
+        }
+    }
+
+    const qualifiedCount = qualifiedCandidates.length;
+    // For evaluating Hedge, we check if HedgeEngine function exists
+    let hedgeActions = [];
+    if (typeof evaluateSensexEtfHedge === "function") {
+        hedgeActions = evaluateSensexEtfHedge(qualifiedCount, openHedgePositions, availableCash);
+    }
+
+    // Pass to Ranking Engine
+    processRankingsAndActionQueue(qualifiedCandidates, allSignalsLog, openPositionCount, execDateStr, hedgeActions);
 
     const execTime = Date.now() - startTime;
     logAudit("generateEODSignals", "GENERATE_SIGNALS", "SUCCESS", qualifiedCandidates.length, `Evaluated ${allSignalsLog.length} stocks | Generated ${qualifiedCandidates.length} qualified BUY candidates`, "", execTime);

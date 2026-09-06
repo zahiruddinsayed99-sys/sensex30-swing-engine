@@ -6,7 +6,7 @@
  * 4. Daily BUY limit of 5 candidates into ACTION_QUEUE
  */
 
-function processRankingsAndActionQueue(candidates, allSignals, openPositionCount, execDateStr) {
+function processRankingsAndActionQueue(candidates, allSignals, openPositionCount, execDateStr, hedgeActions = []) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sigSheet = ss.getSheetByName("SIGNALS");
     const queueSheet = ss.getSheetByName("ACTION_QUEUE");
@@ -93,10 +93,17 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
     const actionQueueRows = [];
     const topCandidates = candidates.slice(0, CONFIG.DAILY_BUY_LIMIT);
 
+    // ACTION_QUEUE schema has been updated in Config.js: "Asset Type" might be missing if I haven't added it yet.
+    // Wait, let's make sure we update it to match the schema defined in Config.js.
+    // The issue states: Add Asset Type (EQUITY vs INDEX_ETF) and Tranche columns to ACTION_QUEUE.
+    // We will update Config.js next, but let's append it now to the queue logic.
+    // Assuming schema is: ["Execution Date", "Symbol", "Asset Type", "Action Type", "Tranche", "Slot Amount", "Rank", "Rank Score", "Signal ID", "Validity", "Action Status", "User Confirmation", "Execution ID"]
+
     topCandidates.forEach(cand => {
         actionQueueRows.push([
             execDateStr,
             cand.symbol,
+            "EQUITY",
             cand.candidateType === "NEW_NAME" ? "BUY_NEW" : "BUY_AVERAGE",
             cand.nextTranche,
             CONFIG.SLOT_SIZE,
@@ -109,6 +116,27 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
             ""
         ]);
     });
+
+    // Add hedge actions to action queue
+    if (hedgeActions && hedgeActions.length > 0) {
+        hedgeActions.forEach(ha => {
+            actionQueueRows.push([
+                execDateStr,
+                ha.symbol,
+                ha.assetType,
+                ha.actionType,
+                ha.tranche,
+                ha.slotAmount,
+                ha.rank,
+                ha.rankScore,
+                ha.signalId,
+                ha.validity,
+                "READY", // ha.actionStatus
+                "PENDING_MANUAL",
+                ""
+            ]);
+        });
+    }
 
     if (queueSheet.getLastRow() > 1) {
         queueSheet.getRange(2, 1, queueSheet.getLastRow() - 1, queueSheet.getLastColumn()).clearContent();

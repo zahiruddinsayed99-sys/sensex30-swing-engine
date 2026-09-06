@@ -59,29 +59,16 @@ function initWatchlistTab(ss) {
   if (!sheet) sheet = ss.insertSheet("WATCHLIST");
   sheet.clear();
 
-  const headers = ["Symbol", "Yahoo Ticker", "Active", "Sector", "Universe", "Universe As Of", "Universe Version"];
+  // Updated WATCHLIST headers to serve as SSOT
+  const headers = ["Symbol", "Company Name", "Yahoo Ticker", "Tier", "Status"];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
     .setFontWeight("bold").setBackground("#2d3748").setFontColor("#ffffff");
 
-  const todayStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd");
-  const rows = MASTER_UNIVERSE_100.map(c => [
-    c.symbol,
-    c.ticker,
-    "YES",
-    c.name,
-    c.tier,
-    todayStr,
-    "V2.0"
-  ]);
-
-  sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
   sheet.setColumnWidth(1, 130);
-  sheet.setColumnWidth(2, 150);
-  sheet.setColumnWidth(3, 90);
-  sheet.setColumnWidth(4, 220);
-  sheet.setColumnWidth(5, 120);
-  sheet.setColumnWidth(6, 120);
-  sheet.setColumnWidth(7, 120);
+  sheet.setColumnWidth(2, 220);
+  sheet.setColumnWidth(3, 150);
+  sheet.setColumnWidth(4, 120);
+  sheet.setColumnWidth(5, 90);
 }
 
 function initSettingsTab(ss) {
