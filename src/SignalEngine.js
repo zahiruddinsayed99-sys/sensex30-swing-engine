@@ -21,10 +21,11 @@ function generateEODSignals() {
         return;
     }
 
-    // Build Tier Lookup Map from MASTER_UNIVERSE_100
+    // Build Tier Lookup Map from getActiveConstituents
     const tierMap = {};
-    if (typeof MASTER_UNIVERSE_100 !== "undefined") {
-        MASTER_UNIVERSE_100.forEach(item => {
+    if (typeof getActiveConstituents === "function") {
+        const constituents = getActiveConstituents();
+        constituents.forEach(item => {
             tierMap[item.symbol] = item.tier;
         });
     }
