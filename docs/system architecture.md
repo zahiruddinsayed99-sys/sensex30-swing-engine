@@ -86,11 +86,6 @@ The system safely segregates capital preservation, alpha generation, and automat
 4. **Step 4 (Harvest & Cushion):** Har ETF tranche +4% gain par profit book karke open unrealized loss ko cash se cushion karta hai.
 5. **Step 5 (Action Queue):** Saare ready orders broker mein execute karne ke liye `ACTION_QUEUE` sheet mein line up ho jate hain.
 
----
-
----
-
-
 ### Quick Visual Reference Sheet
 
 * **Green Path (`EQUITY`):** High Alpha capture — jab market normal ya strong ho.
