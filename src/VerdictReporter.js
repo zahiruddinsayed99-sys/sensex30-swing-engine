@@ -120,3 +120,30 @@ function generateHinglishVerdictReport() {
 
   SpreadsheetApp.getUi().alert("📢 Hinglish Verdict Report Ready!\n\n'VERDICT_REPORT' tab par check karein.");
 }
+
+function testHedgeDiagnostic() {
+  Logger.log("=== Testing SENSEXIETF Hedge Diagnostics ===");
+  const etfData = fetchSensexEtfData(CONFIG.HEDGE.TICKER);
+  
+  if (!etfData) {
+    Logger.log("❌ ERROR: Failed to fetch SENSEXIETF data from Yahoo Finance.");
+    return;
+  }
+  
+  const cmp = etfData.cmp;
+  const high20D = etfData.high20D;
+  const closeT1 = etfData.closeT1;
+  const indexDipPct = ((high20D - cmp) / high20D) * 100;
+  
+  Logger.log(`Ticker: ${CONFIG.HEDGE.TICKER}`);
+  Logger.log(`CMP: ₹${cmp}`);
+  Logger.log(`20-Day High: ₹${high20D}`);
+  Logger.log(`Previous Close (T-1): ₹${closeT1}`);
+  Logger.log(`Calculated Dip: ${indexDipPct.toFixed(2)}%`);
+  Logger.log(`H1 Threshold (>= 1.5% & Green Day): ${indexDipPct >= 1.5} & ${cmp >= closeT1}`);
+  Logger.log(`H2 Threshold (>= 3.5% & > VWAP): ${indexDipPct >= 3.5}`);
+  Logger.log(`H3 Threshold (>= 5.0% & Pivot Bounce): ${indexDipPct >= 5.0}`);
+  
+  const actions = evaluateSensexEtfHedge(0, [], 100000);
+  Logger.log(`Hedge Actions Generated: ${JSON.stringify(actions)}`);
+}
