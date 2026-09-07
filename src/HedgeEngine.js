@@ -3,27 +3,18 @@
  * Evaluates conditions for index hedging when equity opportunities are scarce.
  */
 
-/**
- * Evaluates the SENSEX ETF Hedge criteria and generates corresponding ACTION_QUEUE entries.
- *
- * @param {number} stockQualifiedCount Number of equity buy candidates.
- * @param {Array} openHedgePositions List of open hedge positions from HEDGE_POSITIONS tab.
- * @param {number} availableCash Available capital for execution.
- * @returns {Array} List of actions (buys/sells) to append to the ACTION_QUEUE.
- */
 function evaluateSensexEtfHedge(stockQualifiedCount, openHedgePositions, availableCash) {
   if (!CONFIG.HEDGE || !CONFIG.HEDGE.ENABLED) {
+    Logger.log("[HedgeEngine] Hedge is disabled in CONFIG.");
     return [];
   }
 
   const hedgeActions = [];
 
-  // Liquidity-Contingent Rotation Override
-  // If stockQualifiedCount >= 2 AND availableCash < 4000, emit SELL_HEDGE_ALL to liberate capital for equity entries.
+  // 1. Liquidity-Contingent Rotation Override
   if (stockQualifiedCount >= 2 && availableCash < CONFIG.HEDGE.SLOT_BUDGET) {
     if (openHedgePositions && openHedgePositions.length > 0) {
       openHedgePositions.forEach(pos => {
-        // Only sell if position is OPEN
         if (pos.status === "OPEN" || pos.status === "ACTIVE") {
           hedgeActions.push({
             symbol: CONFIG.HEDGE.SYMBOL,
@@ -39,34 +30,35 @@ function evaluateSensexEtfHedge(stockQualifiedCount, openHedgePositions, availab
           });
         }
       });
-      return hedgeActions; // Priority exit
+      Logger.log(`[HedgeEngine] Liquidity rotation triggered: Selling ${hedgeActions.length} hedge tranches.`);
+      return hedgeActions;
     }
   }
 
-  // Fetch SENSEXIETF Data
+  // 2. Fetch SENSEXIETF Data
   const etfData = fetchSensexEtfData(CONFIG.HEDGE.TICKER);
   if (!etfData || !etfData.cmp) {
+    Logger.log("[HedgeEngine] WARNING: SENSEXIETF data not available or incomplete.");
     return hedgeActions;
   }
 
   const cmp = etfData.cmp;
   const high20D = etfData.high20D;
-  const closeT1 = etfData.closeT1; // Previous session close
+  const closeT1 = etfData.closeT1;
   const vwap = etfData.vwap;
 
   const indexDipPct = ((high20D - cmp) / high20D) * 100;
+  Logger.log(`[HedgeEngine] CMP: ₹${cmp} | 20D High: ₹${high20D} | Dip: ${indexDipPct.toFixed(2)}% | Qualified Stocks: ${stockQualifiedCount}`);
 
-  // Track existing open tranches by ID to avoid duplicate re-buys
   const activeTrancheIds = new Set();
 
-  // FIFO Tranche-wise Profit Harvest (+4.0%):
+  // 3. FIFO Tranche-wise Profit Harvest (+4.0%)
   if (openHedgePositions && openHedgePositions.length > 0) {
     openHedgePositions.forEach(pos => {
       if (pos.status === "OPEN" || pos.status === "ACTIVE") {
         const trancheBuyPrice = Number(pos.buyPrice);
         activeTrancheIds.add(pos.trancheId || pos.tranche);
 
-        // If CMP >= Tranche Buy Price * 1.04, emit SELL_HEDGE_TRANCHE
         if (trancheBuyPrice && cmp >= (trancheBuyPrice * (1 + (CONFIG.HEDGE.TARGET_PROFIT_PCT / 100)))) {
           hedgeActions.push({
             symbol: CONFIG.HEDGE.SYMBOL,
@@ -85,40 +77,38 @@ function evaluateSensexEtfHedge(stockQualifiedCount, openHedgePositions, availab
     });
   }
 
-  // Activation Gate: Only evaluate for new entries when stockQualifiedCount === 0.
+  // 4. Activation Gate: Only evaluate BUY entry when stockQualifiedCount === 0
   if (stockQualifiedCount === 0) {
-    // Evaluate Staged Accumulator (H1/H2/H3)
     const tiers = CONFIG.HEDGE.TIERS;
     let selectedTier = null;
     let rankScore = 0;
 
-    // Check H3 first (highest priority)
+    // Check H3 (>= 5.0% dip)
     const h3 = tiers.find(t => t.id === "H3");
     if (h3 && !activeTrancheIds.has("H3") && indexDipPct >= h3.dipPct && etfData.isPivotBounce) {
       selectedTier = h3;
-      rankScore = 90; // High conviction
+      rankScore = 90;
     }
 
-    // Check H2 next
+    // Check H2 (>= 3.5% dip)
     if (!selectedTier) {
       const h2 = tiers.find(t => t.id === "H2");
-      if (h2 && !activeTrancheIds.has("H2") && indexDipPct >= h2.dipPct && cmp > vwap) {
+      if (h2 && !activeTrancheIds.has("H2") && indexDipPct >= h2.dipPct && cmp >= vwap) {
         selectedTier = h2;
         rankScore = 80;
       }
     }
 
-    // Check H1
+    // Check H1 (>= 1.5% dip)
     if (!selectedTier) {
       const h1 = tiers.find(t => t.id === "H1");
-      if (h1 && !activeTrancheIds.has("H1") && indexDipPct >= h1.dipPct && cmp >= closeT1) {
+      if (h1 && !activeTrancheIds.has("H1") && indexDipPct >= h1.dipPct && cmp >= closeT1) {  
         selectedTier = h1;
         rankScore = 70;
       }
     }
 
     if (selectedTier) {
-      // Estimated slot amount for hedge
       const buyAmount = cmp * selectedTier.shares;
       if (availableCash >= buyAmount || availableCash >= CONFIG.HEDGE.SLOT_BUDGET) {
         hedgeActions.push({
@@ -126,41 +116,33 @@ function evaluateSensexEtfHedge(stockQualifiedCount, openHedgePositions, availab
           actionType: "BUY_HEDGE",
           tranche: selectedTier.id,
           assetType: "INDEX_ETF",
-          slotAmount: Math.min(buyAmount, CONFIG.HEDGE.MAX_SLOT_BUDGET), // Roughly
-          rank: 1, // High priority when stockQualifiedCount === 0
+          slotAmount: Math.min(buyAmount, CONFIG.HEDGE.MAX_SLOT_BUDGET),
+          rank: 1,
           rankScore: rankScore,
           signalId: "HEDGE_ENTRY_" + selectedTier.id,
           validity: "EOD",
           actionStatus: "PENDING_EXECUTION",
-          qty: selectedTier.shares // passing qty for execution layer
+          qty: selectedTier.shares
         });
+        Logger.log(`[HedgeEngine] Triggered BUY for ${selectedTier.id} (${selectedTier.shares} shares @ ₹${cmp})`);
+      } else {
+        Logger.log(`[HedgeEngine] Insufficient cash for Hedge Buy: Available ₹${availableCash}`);
       }
+    } else {
+      Logger.log(`[HedgeEngine] No Hedge Tier met dip/rebound criteria (Index Dip: ${indexDipPct.toFixed(2)}%)`);
     }
   }
 
   return hedgeActions;
 }
 
-/**
- * Fetches recent market data for SENSEXIETF to compute 20D High, VWAP, and previous close.
- * Uses the existing Yahoo Finance integration pattern from DataIngestion.js if available.
- *
- * @param {string} ticker
- * @returns {Object} { cmp, high20D, closeT1, vwap, isPivotBounce }
- */
 function fetchSensexEtfData(ticker) {
-  // Try to use DataIngestion's fetchYahooFinanceData method if it exists
   try {
-    const lookbackDays = 30; // Fetch 30 days to compute 20D high
-    const today = new Date();
-    const period2 = Math.floor(today.getTime() / 1000);
-    const startDate = new Date();
-    startDate.setDate(today.getDate() - lookbackDays);
-    const period1 = Math.floor(startDate.getTime() / 1000);
-
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${period1}&period2=${period2}&interval=1d`;
-
-    const options = { muteHttpExceptions: true };
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1mo`;
+    const options = { 
+      muteHttpExceptions: true,
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
+    };
     const response = UrlFetchApp.fetch(url, options);
     const json = JSON.parse(response.getContentText());
 
@@ -170,18 +152,15 @@ function fetchSensexEtfData(ticker) {
 
       const closes = indicators.close;
       const highs = indicators.high;
-      const volumes = indicators.volume;
       const lows = indicators.low;
 
-      // Filter out nulls
       const validData = [];
       for (let i = 0; i < closes.length; i++) {
-        if (closes[i] !== null && highs[i] !== null && lows[i] !== null) {
+        if (closes[i] != null && highs[i] != null && lows[i] != null) {
           validData.push({
-            close: closes[i],
-            high: highs[i],
-            low: lows[i],
-            volume: volumes[i]
+            close: Number(closes[i].toFixed(2)),
+            high: Number(highs[i].toFixed(2)),
+            low: Number(lows[i].toFixed(2))
           });
         }
       }
@@ -193,32 +172,27 @@ function fetchSensexEtfData(ticker) {
 
         const cmp = currentData.close;
         const closeT1 = prevData.close;
+        const typicalPrice = Number(((currentData.high + currentData.low + currentData.close) / 3).toFixed(2));
 
-        // VWAP approximation for the day (Typical Price)
-        const typicalPrice = (currentData.high + currentData.low + currentData.close) / 3;
-        const vwap = typicalPrice; // Simplified daily VWAP
-
-        // 20-day high
         const lookbackWindow = validData.slice(Math.max(0, validData.length - 20));
         let high20D = -1;
         lookbackWindow.forEach(d => {
           if (d.high > high20D) high20D = d.high;
         });
 
-        // Pivot Bounce logic: CMP > previous high after a downtrend, or simplified as CMP > Open & CMP > Low
-        const isPivotBounce = (cmp > prevData.high && cmp > closeT1);
+        const isPivotBounce = (cmp >= prevData.high || cmp >= closeT1);
 
         return {
           cmp: cmp,
           high20D: high20D,
           closeT1: closeT1,
-          vwap: vwap,
+          vwap: typicalPrice,
           isPivotBounce: isPivotBounce
         };
       }
     }
   } catch (err) {
-    console.error("Failed to fetch SENSEXIETF data: " + err.message);
+    Logger.log("[HedgeEngine] Fetch Error: " + err.message);
   }
 
   return null;
