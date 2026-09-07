@@ -164,16 +164,19 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         histSheet.getRange(histSheet.getLastRow() + 1, 1, historyRows.length, historyRows[0].length).setValues(historyRows);
     }
 
-    // Dynamic UI Alert (No hardcoding, no undefined variables)
-    const totalEvaluated = allSignals.length;
-    const qualifiedCount = candidates.length;
-    const queuedCount = topCandidates.length;
+      // Dynamic UI Alert
+      const totalEvaluated = allSignals.length;
+      const qualifiedStockCount = candidates.length;
+      const queuedStockCount = topCandidates.length;
+      const hedgeCount = (hedgeActions && hedgeActions.length > 0) ? hedgeActions.length : 0;
+      const totalQueued = queuedStockCount + hedgeCount;
 
-    SpreadsheetApp.getUi().alert(
-        `🎯 EOD Signal & Ranking Engine Complete!\n\n` +
-        `Total Candidates Evaluated: ${totalEvaluated}\n` +
-        `Qualified BUY Candidates: ${qualifiedCount}\n` +
-        `Queued for Tomorrow's Action: ${queuedCount} (Max 5 Limit)\n\n` +
-        `Review the 'SIGNALS' and 'ACTION_QUEUE' tabs.`
-    );
+      SpreadsheetApp.getUi().alert(
+          `🎯 EOD Signal & Ranking Engine Complete!\n\n` +
+          `Total Candidates Evaluated: ${totalEvaluated}\n` +
+          `Qualified Stock Buys: ${qualifiedStockCount}\n` +
+          `Hedge ETF Actions: ${hedgeCount}\n` +
+          `Total Queued for Tomorrow: ${totalQueued}\n\n` +
+          `Review the 'SIGNALS' and 'ACTION_QUEUE' tabs.`
+      );
 }
