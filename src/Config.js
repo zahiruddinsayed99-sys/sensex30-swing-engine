@@ -71,39 +71,53 @@ function getActiveConstituents() {
     throw new Error("WATCHLIST sheet not found. Cannot load universe.");
   }
 
-  const watchData = watchSheet.getDataRange().getValues();
+  const lastRow = watchSheet.getLastRow();
+  if (lastRow < 2) {
+    throw new Error("WATCHLIST has no data rows.");
+  }
+
+  // Row 1 (Headers) + Row 2 onwards (Data)
+  const watchData = watchSheet.getRange(1, 1, lastRow, 5).getValues();
+  const headers = watchData[0].map(h => String(h).trim().toUpperCase());
+
+  // Dynamic header mapping taaki column aage-piche ho toh bhi fail na ho
+  const symIdx = headers.indexOf("SYMBOL") !== -1 ? headers.indexOf("SYMBOL") : 0;
+  const nameIdx = headers.indexOf("COMPANY NAME") !== -1 ? headers.indexOf("COMPANY NAME") : 1;
+  const tickIdx = headers.indexOf("YAHOO TICKER") !== -1 ? headers.indexOf("YAHOO TICKER") : 2;
+  const tierIdx = headers.indexOf("TIER") !== -1 ? headers.indexOf("TIER") : 3;
+  const statusIdx = headers.indexOf("STATUS") !== -1 ? headers.indexOf("STATUS") : 4;
+
   const activeTickers = [];
 
-  // Watchlist Columns: [Symbol, Yahoo Ticker, Active, Sector, Universe, Universe As Of, Universe Version]
-  // We use [Symbol, Company Name (we can use Sector temporarily if Name is not there, let's map by indices), Yahoo Ticker, Tier, Status]
-  // Wait, let's check Watchlist headers: ["Symbol", "Yahoo Ticker", "Active", "Sector", "Universe", "Universe As Of", "Universe Version"]
-
-  // To match the SSOT refactoring, columns: [Symbol, Company Name, Yahoo Ticker, Tier, Status]
-  // Columns map to: Symbol: 0, Company Name: 1, Yahoo Ticker: 2, Tier: 3, Status: 4
-
   for (let r = 1; r < watchData.length; r++) {
-    const sym = watchData[r][0];
-    const name = watchData[r][1];
-    const ticker = watchData[r][2];
-    const tier = watchData[r][3];
-    const status = watchData[r][4]; // Status
+    const sym = String(watchData[r][symIdx] || "").trim().toUpperCase();
+    const name = String(watchData[r][nameIdx] || "").trim();
+    let ticker = String(watchData[r][tickIdx] || "").trim().toUpperCase();
+    const tier = String(watchData[r][tierIdx] || "").trim() || "TIER_1";
+    const status = String(watchData[r][statusIdx] || "").trim().toUpperCase();
 
-    // Filter out empty rows or rows where Status === "INACTIVE" or similar
     if (!sym) continue;
 
-    if (status === "ACTIVE" || status === "YES" || status === true) {
+    // Auto-fix Yahoo ticker if empty
+    if (!ticker) {
+      ticker = sym.endsWith(".NS") ? sym : `${sym}.NS`;
+    }
+
+    // Accept if Status is explicitly ACTIVE, YES, TRUE, ya agar Status column blank ho
+    if (status === "ACTIVE" || status === "YES" || status === "TRUE" || status === "") {
       activeTickers.push({
         symbol: sym,
-        name: name,
+        name: name || sym,
         ticker: ticker,
         tier: tier
       });
     }
   }
 
-  if (activeTickers.length !== 100) {
-    console.warn(`Warning: Active stock count is ${activeTickers.length}, expected exactly 100.`);
+  if (activeTickers.length === 0) {
+    throw new Error(`No active stocks found in WATCHLIST. Checked ${watchData.length - 1} rows.`);
   }
 
+  Logger.log(`Successfully loaded ${activeTickers.length} active stocks from WATCHLIST.`);
   return activeTickers;
 }
