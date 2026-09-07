@@ -1,36 +1,44 @@
 /**
  * In-Memory Pipeline: Parallel Market Data Fetch + Real-Time Indicator & CAR State Engine
  */
+
+
+function calcAvg(arr) {
+    if (!arr || arr.length === 0) return 0;
+    return arr.reduce((acc, v) => acc + v, 0) / arr.length;
+}/**
+ * In-Memory Pipeline: Parallel Market Data Fetch + Real-Time Indicator & CAR State Engine
+ */
 function runDataAndIndicatorPipeline() {
     const startTime = Date.now();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const wlSheet = ss.getSheetByName("WATCHLIST");
     const indSheet = ss.getSheetByName("INDICATORS");
 
-    if (!wlSheet || !indSheet) {
-        SpreadsheetApp.getUi().alert("Required sheets missing.");
+    if (!indSheet) {
+        SpreadsheetApp.getUi().alert("INDICATORS sheet missing. Please run Clean Setup first.");
         return;
     }
 
-    const wlData = wlSheet.getDataRange().getValues();
-    const activeStocks = [];
-
-    for (let r = 1; r < wlData.length; r++) {
-        if (String(wlData[r][2]).toUpperCase() === "YES" && wlData[r][1]) {
-            activeStocks.push({
-                symbol: wlData[r][0],
-                ticker: wlData[r][1].toString().trim()
-            });
-        }
+    // 1. Single Source of Truth: getActiveConstituents() se load karein
+    let constituents = [];
+    try {
+        constituents = getActiveConstituents();
+    } catch (e) {
+        SpreadsheetApp.getUi().alert("Watchlist Error: " + e.message);
+        return;
     }
 
-    if (activeStocks.length === 0) {
+    if (!constituents || constituents.length === 0) {
         SpreadsheetApp.getUi().alert("No active stocks found in WATCHLIST.");
         return;
     }
 
-    const constituents = getActiveConstituents();
-    // 1. Fetch in two parallel batches of 15
+    const activeStocks = constituents.map(item => ({
+        symbol: item.symbol,
+        ticker: item.ticker || (item.symbol.endsWith(".NS") ? item.symbol : `${item.symbol}.NS`)
+    }));
+
+    // 2. Fetch in parallel batches of 15
     const BATCH_SIZE = 15;
     const rawResponses = [];
 
@@ -52,7 +60,7 @@ function runDataAndIndicatorPipeline() {
         }
     }
 
-    // 2. Parse bars & compute indicators directly in memory
+    // 3. Parse bars & compute indicators directly in memory
     const indicatorRows = [];
     const errors = [];
     let successCount = 0;
@@ -190,7 +198,7 @@ function runDataAndIndicatorPipeline() {
         }
     }
 
-    // 3. Write directly to INDICATORS
+    // 4. Write directly to INDICATORS
     if (indSheet.getLastRow() > 1) {
         indSheet.getRange(2, 1, indSheet.getLastRow() - 1, indSheet.getLastColumn()).clearContent();
     }
@@ -200,11 +208,11 @@ function runDataAndIndicatorPipeline() {
     }
 
     const execTime = Date.now() - startTime;
-    const status = errors.length === 0 ? "SUCCESS" : "PARTIAL";
-    logAudit("runDataAndIndicatorPipeline", "FETCH_INDICATORS", "SUCCESS", indicatorRows.length, `Processed ${indicatorRows.length} active constituents`, "", execTime);
+    if (typeof logAudit === "function") {
+        logAudit("runDataAndIndicatorPipeline", "FETCH_INDICATORS", errors.length === 0 ? "SUCCESS" : "PARTIAL", indicatorRows.length, `Processed ${indicatorRows.length} active constituents`, errors.join("; "), execTime);
+    }
 
-    // Dynamic line se replace karein:
-    SpreadsheetApp.getUi().alert(`In-Memory Scan Complete!\n\nExecution Time: ${(execTime / 1000).toFixed(1)}s\nStocks Processed: ${indicatorRows.length} / ${constituents.length}\nAll ${indicatorRows.length} constituents computed cleanly!`);
+    SpreadsheetApp.getUi().alert(`In-Memory Scan Complete!\n\nExecution Time: ${(execTime / 1000).toFixed(1)}s\nStocks Processed: ${indicatorRows.length} / ${constituents.length}\nAll constituents computed cleanly!`);
 }
 
 function calcAvg(arr) {
