@@ -22,12 +22,15 @@ function runPhase1Setup() {
       }
     });
 
-    // Apply clean table headers
+    // Apply clean table headers (EXCLUDE WATCHLIST from being wiped)
     targetSheets.forEach(sheetName => {
+      // SAFEGUARD: WATCHLIST is the SSOT master data — NEVER wipe it during setup
+      if (sheetName === "WATCHLIST") return;
+
       const sheet = ss.getSheetByName(sheetName);
       const headers = SHEET_SCHEMAS[sheetName];
 
-      if (headers.length > 0) {
+      if (headers && headers.length > 0) {
         sheet.clear();
         sheet.getRange(1, 1, 1, headers.length).setValues([headers])
           .setFontWeight("bold")
@@ -40,29 +43,48 @@ function runPhase1Setup() {
     // Populate SETTINGS Tab
     initSettingsTab(ss);
 
-    // Populate WATCHLIST Tab
+    // Safely check/initialize WATCHLIST Tab without wiping existing data
     initWatchlistTab(ss);
 
     // Render Dashboard
-    renderDashboardLayout(ss.getSheetByName("DASHBOARD"));
+    if (typeof renderDashboardLayout === "function") {
+      renderDashboardLayout(ss.getSheetByName("DASHBOARD"));
+    }
 
-    logAudit("runPhase1Setup", "SETUP_CLEAN_ENGINE", "SUCCESS", targetSheets.length, "Initialized 10 tabs with in-memory engine", "", Date.now() - startTime);
-    SpreadsheetApp.getUi().alert("Clean 10-tab architecture initialized successfully!");
+    logAudit("runPhase1Setup", "SETUP_CLEAN_ENGINE", "SUCCESS", targetSheets.length, "Initialized tabs safely (WATCHLIST preserved)", "", Date.now() - startTime);
+    SpreadsheetApp.getUi().alert("Clean architecture initialized successfully!\n\n(Note: WATCHLIST data was safely preserved).");
   } catch (err) {
-    logAudit("runPhase1Setup", "SETUP_CLEAN_ENGINE", "FAILED", 0, "", err.message, Date.now() - startTime);
+    if (typeof logAudit === "function") {
+      logAudit("runPhase1Setup", "SETUP_CLEAN_ENGINE", "FAILED", 0, "", err.message, Date.now() - startTime);
+    }
     SpreadsheetApp.getUi().alert("Setup failed: " + err.message);
   }
 }
 
+/**
+ * Safe Watchlist Initializer:
+ * Preserves user's stock list if already present.
+ */
 function initWatchlistTab(ss) {
   let sheet = ss.getSheetByName("WATCHLIST");
   if (!sheet) sheet = ss.insertSheet("WATCHLIST");
-  sheet.clear();
 
-  // Updated WATCHLIST headers to serve as SSOT
   const headers = ["Symbol", "Company Name", "Yahoo Ticker", "Tier", "Status"];
+
+  // Case 1: Watchlist already has stock data -> DO NOT WIPE!
+  if (sheet.getLastRow() >= 2) {
+    // Only ensure headers at Row 1 match expected SSOT schema
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+      .setFontWeight("bold").setBackground("#2d3748").setFontColor("#ffffff");
+    sheet.setFrozenRows(1);
+    return;
+  }
+
+  // Case 2: Watchlist is totally blank/new -> Set headers only
+  sheet.clear();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
     .setFontWeight("bold").setBackground("#2d3748").setFontColor("#ffffff");
+  sheet.setFrozenRows(1);
 
   sheet.setColumnWidth(1, 130);
   sheet.setColumnWidth(2, 220);
