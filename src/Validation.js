@@ -1,5 +1,5 @@
 /**
- * UI Menu Integration
+ * UI Menu Integration  
  */
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("⚡ SENSEX 30 Engine")
