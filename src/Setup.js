@@ -128,3 +128,21 @@ function initSettingsTab(ss) {
   sheet.setColumnWidth(3, 380);
   sheet.setColumnWidth(4, 120);
 }
+/**
+ * Context-safe alert function that checks if UI is available.
+ * Prevents automated triggers from failing.
+ */
+function safeAlert(message, title) {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    if (ui) {
+      if (title) {
+        ui.alert(title, message, ui.ButtonSet.OK);
+      } else {
+        ui.alert(message);
+      }
+    }
+  } catch (e) {
+    Logger.log(`[Background Context - Alert Suppressed]: ${message}`);
+  }
+}

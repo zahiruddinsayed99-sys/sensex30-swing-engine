@@ -13,7 +13,8 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
     const histSheet = ss.getSheetByName("SIGNAL_HISTORY");
 
     if (!sigSheet || !queueSheet) {
-        SpreadsheetApp.getUi().alert("SIGNALS or ACTION_QUEUE sheet not found.");
+        //SpreadsheetApp.getUi().alert("SIGNALS or ACTION_QUEUE sheet not found.");
+        safeAlert("SIGNALS or ACTION_QUEUE sheet not found.", "Singal");
         return;
     }
 
@@ -164,19 +165,24 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         histSheet.getRange(histSheet.getLastRow() + 1, 1, historyRows.length, historyRows[0].length).setValues(historyRows);
     }
 
-      // Dynamic UI Alert
-      const totalEvaluated = allSignals.length;
-      const qualifiedStockCount = candidates.length;
-      const queuedStockCount = topCandidates.length;
-      const hedgeCount = (hedgeActions && hedgeActions.length > 0) ? hedgeActions.length : 0;
-      const totalQueued = queuedStockCount + hedgeCount;
+    // Dynamic UI Alert (Background / Trigger Safe)
+    const totalEvaluated = allSignals.length;
+    const qualifiedCount = candidates.length;
+    const queuedCount = topCandidates.length;
+    const hedgeCount = (hedgeActions && hedgeActions.length > 0) ? hedgeActions.length : 0;
+    const totalQueued = queuedCount + hedgeCount;
 
-      SpreadsheetApp.getUi().alert(
-          `🎯 EOD Signal & Ranking Engine Complete!\n\n` +
-          `Total Candidates Evaluated: ${totalEvaluated}\n` +
-          `Qualified Stock Buys: ${qualifiedStockCount}\n` +
-          `Hedge ETF Actions: ${hedgeCount}\n` +
-          `Total Queued for Tomorrow: ${totalQueued}\n\n` +
-          `Review the 'SIGNALS' and 'ACTION_QUEUE' tabs.`
-      );
+    const summaryMsg = `🎯 EOD Signal & Ranking Engine Complete!\n\n` +
+        `Total Candidates Evaluated: ${totalEvaluated}\n` +
+        `Qualified Stock Buys: ${qualifiedCount}\n` +
+        `Hedge ETF Actions: ${hedgeCount}\n` +
+        `Total Queued for Tomorrow: ${totalQueued}\n\n` +
+        `Review the 'SIGNALS' and 'ACTION_QUEUE' tabs.`;
+
+    try {
+        SpreadsheetApp.getUi().alert(summaryMsg);
+    } catch (uiErr) {
+        // Trigger background context me getUi() fail hota hai
+        Logger.log("[RankingEngine] Running in background trigger mode:\n" + summaryMsg);
+    }
 }

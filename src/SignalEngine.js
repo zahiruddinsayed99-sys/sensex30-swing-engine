@@ -11,13 +11,15 @@ function generateEODSignals() {
     const sigSheet = ss.getSheetByName("SIGNALS");
 
     if (!indSheet || !posSheet || !sigSheet) {
-        SpreadsheetApp.getUi().alert("Required sheets missing.");
+        //SpreadsheetApp.getUi().alert("Required sheets missing.");
+        safeAlert("Required sheets missing.", "Gen. EOD Singal");
         return;
     }
 
     const indData = indSheet.getDataRange().getValues();
     if (indData.length < 2) {
-        SpreadsheetApp.getUi().alert("INDICATORS sheet is empty. Run '3. Run EOD Scan' first.");
+        //SpreadsheetApp.getUi().alert("INDICATORS sheet is empty. Run '3. Run EOD Scan' first.");
+        safeAlert("INDICATORS sheet is empty. Run '3. Run EOD Scan' first.", "Gen. EOD Singal");
         return;
     }
 
