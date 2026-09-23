@@ -150,11 +150,11 @@ function runDataAndIndicatorPipeline() {
             const avgVol = Math.round(calcAvg(volumes.slice(-20)));
             const prevSessionVWAP = Number(((prevBar.high + prevBar.low + prevBar.close) / 3).toFixed(2));
 
-            // 1. Structural Trend: Price > 200 EMA (or 50 EMA if <200 bars) & medium-term structure intact
+            // 1. Structural Trend: Price > 200 EMA & medium-term structure intact
             const passesTrend = (cmp > ema200) && (ema20 > ema50 || cmp > ema50);
             const trendStatus = passesTrend ? "PASS" : "FAIL";
 
-            // 2. Dynamic Pullback: Intraday tested near 20 EMA, close holds above support
+            // 2. Dynamic Pullback: Low touched 20 EMA, close holds above support
             const passesDip = (todayBar.low <= ema20 * 1.01) && (cmp >= ema20 * 0.985);
             const dipStatus = passesDip ? "PASS" : "FAIL";
 

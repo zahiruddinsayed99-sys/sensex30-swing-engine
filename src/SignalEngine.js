@@ -1,6 +1,6 @@
 /**
  * Signal Engine — SENSEX Multi-Tier Basket Cycle Strategy
- * Evaluates 4 Tranches, Target Exits (+6%), and Quarantine Protection (-20%)
+ * Evaluates 4 Tranches, Target Exits (+6%), Quarantine Protection (-20%), and Dispatches EOD Email Alerts
  */
 
 function generateEODSignals() {
@@ -29,7 +29,7 @@ function generateEODSignals() {
         });
     }
 
-    // Load existing positions map: symbol -> { status, tranche, slots, totalInvested, avgPrice, t1Price, basketStatus }
+    // Load existing positions map
     const posData = posSheet.getDataRange().getValues();
     const positionMap = {};
     let openPositionCount = 0;
@@ -66,6 +66,7 @@ function generateEODSignals() {
     const MAX_STOCKS = CONFIG.MAX_DISTINCT_STOCKS || 6;
     const TARGET_PCT = CONFIG.CONSOLIDATED_TARGET_PCT || 6.0;
     const QUARANTINE_PCT = CONFIG.QUARANTINE_PCT || -20.0;
+    const MAX_TRANCHES = CONFIG.MAX_TRANCHES_PER_STOCK || 4;
 
     for (let i = 1; i < indData.length; i++) {
         const [date, sym, cmp, ema20, ema50, ema200, vwap, vol, avgVol, trend, dip, recovery, dma20Reclaim, vwapReclaim] = indData[i];
@@ -73,7 +74,8 @@ function generateEODSignals() {
         const pos = positionMap[sym] || { status: "NONE", tranche: "T0", slots: 0, totalInvested: 0, avgPrice: 0, t1Price: 0, basketStatus: "ACTIVE" };
         const stockTier = tierMap[sym] || "SENSEX_30";
 
-        const isMaxed = pos.slots >= (CONFIG.MAX_TRANCHES_PER_STOCK || 4);
+        const currentTrancheNum = parseInt(pos.tranche.replace("T", "")) || 0;
+        const isMaxed = pos.slots >= MAX_TRANCHES || currentTrancheNum >= MAX_TRANCHES;
         const isQuarantined = pos.basketStatus === "QUARANTINED";
 
         let finalSignal = "NO_ACTION";
@@ -84,10 +86,9 @@ function generateEODSignals() {
         let nextTranche = "T1";
 
         // ----------------------------------------------------
-        // BRANCH A: ACTIVE OPEN POSITION MANAGEMENT (AVERAGING / TARGET / QUARANTINE)
+        // BRANCH A: ACTIVE OPEN POSITIONS (AVERAGING / TARGET / QUARANTINE)
         // ----------------------------------------------------
         if (pos.status === "OPEN") {
-            const currentTrancheNum = parseInt(pos.tranche.replace("T", "")) || 1;
             const t1RefPrice = pos.t1Price > 0 ? pos.t1Price : pos.avgPrice;
             const drawdownFromT1 = ((cmp - t1RefPrice) / t1RefPrice) * 100;
             const pnlFromAvg = pos.avgPrice > 0 ? ((cmp - pos.avgPrice) / pos.avgPrice) * 100 : 0;
@@ -105,9 +106,9 @@ function generateEODSignals() {
             // 3. Max Tranches Reached
             else if (isMaxed) {
                 finalSignal = "HOLD_MAX";
-                reason = "Max 4 tranches allocated. Awaiting mean-reversion recovery.";
+                reason = `Max ${MAX_TRANCHES} tranches allocated. Awaiting mean-reversion recovery.`;
             }
-            // 4. Tranche Additions Based on Drawdown Spacing
+            // 4. Tranche Additions
             else {
                 if (currentTrancheNum === 1 && drawdownFromT1 <= -4.5) {
                     nextTranche = "T2";
@@ -154,18 +155,24 @@ function generateEODSignals() {
                 } else if (passesTrend && passesDip && !passesRecovery) {
                     finalSignal = "WAIT_TRIGGER";
                     reason = "Pullback at 20 EMA support. Awaiting reversal confirmation.";
+                } else if (passesTrend && !passesDip) {
+                    finalSignal = "NO_ACTION";
+                    reason = "No Dip Setup. Stock 200 EMA ke upar hai par abhi apne 20 EMA support zone se dur chal raha hai.";
                 } else if (!passesTrend) {
                     finalSignal = "NO_ACTION";
                     reason = "Trend filter failed (below 200 EMA).";
+                } else {
+                    finalSignal = "NO_ACTION";
+                    reason = "20 EMA reclaim pending.";
                 }
             }
         }
 
-        // Rank scoring for qualified BUY signals
         if (isFullPass) {
             const volMultiple = avgVol > 0 ? (vol / avgVol) : 1;
             const distAboveEma20 = ema20 > 0 ? ((cmp - ema20) / ema20) * 100 : 0;
-            rankScore = Number((Math.max(0, volMultiple * 20) + Math.max(0, distAboveEma20 * 10)).toFixed(2));
+            const typePriority = candidateType === "AVERAGING" ? 50 : 0;
+            rankScore = Number((typePriority + Math.max(0, volMultiple * 20) + Math.max(0, distAboveEma20 * 10)).toFixed(2));
 
             qualifiedCandidates.push({
                 symbol: sym,
@@ -243,4 +250,37 @@ function generateEODSignals() {
 
     const execTime = Date.now() - startTime;
     logAudit("generateEODSignals", "GENERATE_SIGNALS", "SUCCESS", qualifiedCandidates.length, `Evaluated ${allSignalsLog.length} stocks | Generated ${qualifiedCandidates.length} qualified BUY/AVERAGING candidates`, "", execTime);
+}
+
+/**
+ * Daily Automated EOD Job (Triggered automatically at 4:00 PM IST)
+ * Runs market data fetch, indicators math, signal generation, and dispatches automated HTML email alert.
+ */
+function runDailyEODJob() {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sun, 6 = Sat
+
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+        Logger.log("Weekend detected. Skipping daily EOD scan.");
+        return;
+    }
+
+    try {
+        // 1. Fetch latest prices & calculate indicators in RAM
+        runDataAndIndicatorPipeline();
+
+        // 2. Generate signals and rank top candidates into ACTION_QUEUE
+        generateEODSignals();
+
+        // 3. Dispatch automated HTML email alert if BUY or EXIT signals exist
+        if (typeof sendEODSignalAlert === "function") {
+            sendEODSignalAlert();
+        }
+
+        const constituentsCount = typeof getActiveConstituents === "function" ? getActiveConstituents().length : 100;
+        logAudit("runDailyEODJob", "DAILY_EOD_JOB", "SUCCESS", constituentsCount, "Automated EOD scan, signals & email alert sent", "", 0);
+    } catch (err) {
+        Logger.log("ERROR STACK TRACE: " + err.stack);
+        logAudit("runDailyEODJob", "DAILY_EOD_JOB", "FAILED", 0, "Automated scan failed: " + err.message, err.stack, 0);
+    }
 }

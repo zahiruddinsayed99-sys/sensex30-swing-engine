@@ -46,8 +46,6 @@ function generateHinglishVerdictReport() {
     const nextTranche = row[8] || "T1";
     const cmp = Number(row[9]) || 0;
     const dip = row[13];
-    const recovery = row[14];
-    const dma20Rec = row[15];
     const trend = row[17];
     const finalSig = (row[19] || "NO_ACTION").toString();
     const reasonText = row[20] || "";
@@ -121,11 +119,11 @@ function generateHinglishVerdictReport() {
   repSheet.getRange(5, 5, reportRows.length, 2).setWrap(true);
 
   repSheet.setColumnWidth(1, 20);
-  repSheet.setColumnWidth(2, 130); // Symbol
-  repSheet.setColumnWidth(3, 110); // CMP
-  repSheet.setColumnWidth(4, 150); // Status
-  repSheet.setColumnWidth(5, 430); // Hinglish Verdict
-  repSheet.setColumnWidth(6, 280); // Action Guide
+  repSheet.setColumnWidth(2, 130);
+  repSheet.setColumnWidth(3, 110);
+  repSheet.setColumnWidth(4, 150);
+  repSheet.setColumnWidth(5, 430);
+  repSheet.setColumnWidth(6, 280);
 
   safeAlert("📢 Hinglish Verdict Report Ready!\n\n'VERDICT_REPORT' tab par check karein.", "Verdict Report");
 }
