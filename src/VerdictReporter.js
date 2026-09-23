@@ -43,10 +43,10 @@ function generateHinglishVerdictReport() {
   for (let i = 1; i < sigData.length; i++) {
     const row = sigData[i];
     const sym = row[4];
-    const nextTranche = row[8] || "T1";
-    const cmp = Number(row[9]) || 0;
-    const dip = row[13];
-    const trend = row[17];
+    const nextTranche = row[7] || "T1";
+    const cmp = Number(row[8]) || 0;
+    const dip = row[12];
+    const trend = row[16];
     const finalSig = (row[19] || "NO_ACTION").toString();
     const reasonText = row[20] || "";
 
