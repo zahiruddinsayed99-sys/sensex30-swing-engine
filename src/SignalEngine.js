@@ -238,6 +238,8 @@ function runDailyEODJob() {
         const constituentsCount = typeof getActiveConstituents === "function" ? getActiveConstituents().length : 100;
         logAudit("runDailyEODJob", "DAILY_EOD_JOB", "SUCCESS", constituentsCount, `Automated EOD scan & signal generation completed for ${constituentsCount} stocks`, "", 0);
     } catch (err) {
-        logAudit("runDailyEODJob", "DAILY_EOD_JOB", "FAILED", 0, "Automated scan failed", err.message, 0);
+        // err.stack se exact file name aur line number log hoga
+        Logger.log("ERROR STACK TRACE: " + err.stack);
+        logAudit("runDailyEODJob", "DAILY_EOD_JOB", "FAILED", 0, "Automated scan failed: " + err.message, err.stack, 0);
     }
 }

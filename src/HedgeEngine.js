@@ -102,7 +102,7 @@ function evaluateSensexEtfHedge(stockQualifiedCount, openHedgePositions, availab
     // Check H1 (>= 1.5% dip)
     if (!selectedTier) {
       const h1 = tiers.find(t => t.id === "H1");
-      if (h1 && !activeTrancheIds.has("H1") && indexDipPct >= h1.dipPct && cmp >= closeT1) {  
+      if (h1 && !activeTrancheIds.has("H1") && indexDipPct >= h1.dipPct && cmp >= closeT1) {
         selectedTier = h1;
         rankScore = 70;
       }
@@ -139,7 +139,7 @@ function evaluateSensexEtfHedge(stockQualifiedCount, openHedgePositions, availab
 function fetchSensexEtfData(ticker) {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1mo`;
-    const options = { 
+    const options = {
       muteHttpExceptions: true,
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
     };

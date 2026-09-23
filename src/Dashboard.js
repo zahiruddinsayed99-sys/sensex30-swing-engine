@@ -11,12 +11,12 @@ function renderDashboardLayout(sheet = null) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     sheet = ss.getSheetByName("DASHBOARD");
   }
-  
+
   if (!sheet) return;
 
   sheet.clear();
   sheet.setHiddenGridlines(true);
-  
+
   // Column Sizing for UI Cards
   sheet.setColumnWidth(1, 20);  // Padding
   sheet.setColumnWidth(2, 250); // Label Col 1
@@ -27,19 +27,19 @@ function renderDashboardLayout(sheet = null) {
 
   // --- HEADER ---
   sheet.getRange("B2:F3").merge()
-       .setValue("⚡ SENSEX 30 MULTI-TRANCHE ENGINE (HITL)")
-       .setFontSize(16)
-       .setFontWeight("bold")
-       .setBackground("#1a365d")
-       .setFontColor("#ffffff")
-       .setHorizontalAlignment("center")
-       .setVerticalAlignment("middle");
+    .setValue("⚡ SENSEX 30 MULTI-TRANCHE ENGINE (HITL)")
+    .setFontSize(16)
+    .setFontWeight("bold")
+    .setBackground("#1a365d")
+    .setFontColor("#ffffff")
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle");
 
   sheet.getRange("B4:F4").merge()
-       .setValue("Control Center & Portfolio Health")
-       .setFontSize(10)
-       .setFontColor("#718096")
-       .setHorizontalAlignment("center");
+    .setValue("Control Center & Portfolio Health")
+    .setFontSize(10)
+    .setFontColor("#718096")
+    .setHorizontalAlignment("center");
 
   // --- PORTFOLIO SUMMARY CARD ---
   sheet.getRange("B6:C6").merge().setValue("📊 PORTFOLIO METRICS").setFontWeight("bold").setBackground("#e2e8f0");

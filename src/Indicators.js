@@ -15,7 +15,8 @@ function runDataAndIndicatorPipeline() {
     const indSheet = ss.getSheetByName("INDICATORS");
 
     if (!indSheet) {
-        SpreadsheetApp.getUi().alert("INDICATORS sheet missing. Please run Clean Setup first.");
+        //SpreadsheetApp.getUi().alert("INDICATORS sheet missing. Please run Clean Setup first.");
+        safeAlert("INDICATORS sheet missing. Please run Clean Setup first.", "Indicators");
         return;
     }
 
@@ -24,12 +25,14 @@ function runDataAndIndicatorPipeline() {
     try {
         constituents = getActiveConstituents();
     } catch (e) {
-        SpreadsheetApp.getUi().alert("Watchlist Error: " + e.message);
+        //SpreadsheetApp.getUi().alert("Watchlist Error: " + e.message);
+        safeAlert("Watchlist Error: " + e.message, "Indicators");
         return;
     }
 
     if (!constituents || constituents.length === 0) {
-        SpreadsheetApp.getUi().alert("No active stocks found in WATCHLIST.");
+        //SpreadsheetApp.getUi().alert("No active stocks found in WATCHLIST.");
+        safeAlert("No active stocks found in WATCHLIST.", "Indicators");
         return;
     }
 
@@ -212,7 +215,11 @@ function runDataAndIndicatorPipeline() {
         logAudit("runDataAndIndicatorPipeline", "FETCH_INDICATORS", errors.length === 0 ? "SUCCESS" : "PARTIAL", indicatorRows.length, `Processed ${indicatorRows.length} active constituents`, errors.join("; "), execTime);
     }
 
-    SpreadsheetApp.getUi().alert(`In-Memory Scan Complete!\n\nExecution Time: ${(execTime / 1000).toFixed(1)}s\nStocks Processed: ${indicatorRows.length} / ${constituents.length}\nAll constituents computed cleanly!`);
+    safeAlert(
+        `In-Memory Scan Complete!\n\nExecution Time: ${(execTime / 1000).toFixed(1)}s\nStocks Processed: ${indicatorRows.length} / ${constituents.length}\nAll constituents computed cleanly!`,
+        "Indicators"
+    );
+    //SpreadsheetApp.getUi().alert(`In-Memory Scan Complete!\n\nExecution Time: ${(execTime / 1000).toFixed(1)}s\nStocks //Processed: ${indicatorRows.length} / ${constituents.length}\nAll constituents computed cleanly!`);
 }
 
 function calcAvg(arr) {
