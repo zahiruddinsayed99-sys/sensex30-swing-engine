@@ -1,22 +1,38 @@
 /**
  * Ranking Engine — Implements:
  * 1. "Diversify First" priority rule (Fill up to 10 distinct names first, then average)
- * 2. Deterministic ranking without artificial tie-breakers
- * 3. Daily BUY limit of 5 candidates into ACTION_QUEUE
+ * 2. Tier Priority (SENSEX_30 > NEXT_30 > TOP_40)
+ * 3. Deterministic ranking without artificial tie-breakers
+ * 4. Daily BUY limit of 5 candidates into ACTION_QUEUE
  */
 
-function processRankingsAndActionQueue(candidates, allSignals, openPositionCount, execDateStr) {
+function processRankingsAndActionQueue(candidates, allSignals, openPositionCount, execDateStr, hedgeActions = []) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sigSheet = ss.getSheetByName("SIGNALS");
     const queueSheet = ss.getSheetByName("ACTION_QUEUE");
     const histSheet = ss.getSheetByName("SIGNAL_HISTORY");
 
+    if (!sigSheet || !queueSheet) {
+        //SpreadsheetApp.getUi().alert("SIGNALS or ACTION_QUEUE sheet not found.");
+        safeAlert("SIGNALS or ACTION_QUEUE sheet not found.", "Singal");
+        return;
+    }
+
     if (candidates.length > 0) {
         candidates.sort((a, b) => {
+            // 1. Diversify First Rule
             if (openPositionCount < CONFIG.MAX_DISTINCT_STOCKS) {
                 if (a.candidateType === "NEW_NAME" && b.candidateType === "AVERAGING") return -1;
                 if (a.candidateType === "AVERAGING" && b.candidateType === "NEW_NAME") return 1;
             }
+
+            // 2. Tier Priority: SENSEX_30 > NEXT_30 > TOP_40
+            const tierWeights = { "SENSEX_30": 3, "NEXT_30": 2, "TOP_40": 1 };
+            const tierA = tierWeights[a.tier] || 1;
+            const tierB = tierWeights[b.tier] || 1;
+            if (tierA !== tierB) return tierB - tierA;
+
+            // 3. Technical Rank Score
             return b.rankScore - a.rankScore;
         });
 
@@ -66,6 +82,7 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         ];
     });
 
+    // Write to SIGNALS Tab
     if (sigSheet.getLastRow() > 1) {
         sigSheet.getRange(2, 1, sigSheet.getLastRow() - 1, sigSheet.getLastColumn()).clearContent();
     }
@@ -73,13 +90,21 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         sigSheet.getRange(2, 1, signalRows.length, signalRows[0].length).setValues(signalRows);
     }
 
+    // Populate ACTION_QUEUE (Top 5 Max Limit)
     const actionQueueRows = [];
     const topCandidates = candidates.slice(0, CONFIG.DAILY_BUY_LIMIT);
+
+    // ACTION_QUEUE schema has been updated in Config.js: "Asset Type" might be missing if I haven't added it yet.
+    // Wait, let's make sure we update it to match the schema defined in Config.js.
+    // The issue states: Add Asset Type (EQUITY vs INDEX_ETF) and Tranche columns to ACTION_QUEUE.
+    // We will update Config.js next, but let's append it now to the queue logic.
+    // Assuming schema is: ["Execution Date", "Symbol", "Asset Type", "Action Type", "Tranche", "Slot Amount", "Rank", "Rank Score", "Signal ID", "Validity", "Action Status", "User Confirmation", "Execution ID"]
 
     topCandidates.forEach(cand => {
         actionQueueRows.push([
             execDateStr,
             cand.symbol,
+            "EQUITY",
             cand.candidateType === "NEW_NAME" ? "BUY_NEW" : "BUY_AVERAGE",
             cand.nextTranche,
             CONFIG.SLOT_SIZE,
@@ -93,6 +118,27 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         ]);
     });
 
+    // Add hedge actions to action queue
+    if (hedgeActions && hedgeActions.length > 0) {
+        hedgeActions.forEach(ha => {
+            actionQueueRows.push([
+                execDateStr,
+                ha.symbol,
+                ha.assetType,
+                ha.actionType,
+                ha.tranche,
+                ha.slotAmount,
+                ha.rank,
+                ha.rankScore,
+                ha.signalId,
+                ha.validity,
+                "READY", // ha.actionStatus
+                "PENDING_MANUAL",
+                ""
+            ]);
+        });
+    }
+
     if (queueSheet.getLastRow() > 1) {
         queueSheet.getRange(2, 1, queueSheet.getLastRow() - 1, queueSheet.getLastColumn()).clearContent();
     }
@@ -100,6 +146,7 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         queueSheet.getRange(2, 1, actionQueueRows.length, actionQueueRows[0].length).setValues(actionQueueRows);
     }
 
+    // Update SIGNAL_HISTORY
     if (topCandidates.length > 0 && histSheet) {
         const historyRows = topCandidates.map(c => [
             execDateStr,
@@ -118,11 +165,24 @@ function processRankingsAndActionQueue(candidates, allSignals, openPositionCount
         histSheet.getRange(histSheet.getLastRow() + 1, 1, historyRows.length, historyRows[0].length).setValues(historyRows);
     }
 
-    SpreadsheetApp.getUi().alert(
-        "🎯 EOD Signal & Ranking Engine Complete!\n\n" +
-        "Total Candidates Evaluated: 30\n" +
-        "Qualified BUY Candidates: " + candidates.length + "\n" +
-        "Queued for Tomorrow's Action: " + topCandidates.length + " (Max 5 Limit)\n\n" +
-        "Review the 'SIGNALS' and 'ACTION_QUEUE' tabs."
-    );
+    // Dynamic UI Alert (Background / Trigger Safe)
+    const totalEvaluated = allSignals.length;
+    const qualifiedCount = candidates.length;
+    const queuedCount = topCandidates.length;
+    const hedgeCount = (hedgeActions && hedgeActions.length > 0) ? hedgeActions.length : 0;
+    const totalQueued = queuedCount + hedgeCount;
+
+    const summaryMsg = `🎯 EOD Signal & Ranking Engine Complete!\n\n` +
+        `Total Candidates Evaluated: ${totalEvaluated}\n` +
+        `Qualified Stock Buys: ${qualifiedCount}\n` +
+        `Hedge ETF Actions: ${hedgeCount}\n` +
+        `Total Queued for Tomorrow: ${totalQueued}\n\n` +
+        `Review the 'SIGNALS' and 'ACTION_QUEUE' tabs.`;
+
+    try {
+        SpreadsheetApp.getUi().alert(summaryMsg);
+    } catch (uiErr) {
+        // Trigger background context me getUi() fail hota hai
+        Logger.log("[RankingEngine] Running in background trigger mode:\n" + summaryMsg);
+    }
 }

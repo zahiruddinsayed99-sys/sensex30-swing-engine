@@ -1,5 +1,5 @@
 /**
- * Signal Engine — SENSEX 30 Basket Cycle Strategy
+ * Signal Engine — SENSEX Multi-Tier Basket Cycle Strategy
  * Evaluates Trend -> Dip (>=5%) -> CAR Recovery -> 20 DMA & VWAP Reclaim -> Tranche Eligibility
  */
 
@@ -11,14 +11,25 @@ function generateEODSignals() {
     const sigSheet = ss.getSheetByName("SIGNALS");
 
     if (!indSheet || !posSheet || !sigSheet) {
-        SpreadsheetApp.getUi().alert("Required sheets missing.");
+        //SpreadsheetApp.getUi().alert("Required sheets missing.");
+        safeAlert("Required sheets missing.", "Gen. EOD Singal");
         return;
     }
 
     const indData = indSheet.getDataRange().getValues();
     if (indData.length < 2) {
-        SpreadsheetApp.getUi().alert("INDICATORS sheet is empty. Run '3. Run EOD Scan' first.");
+        //SpreadsheetApp.getUi().alert("INDICATORS sheet is empty. Run '3. Run EOD Scan' first.");
+        safeAlert("INDICATORS sheet is empty. Run '3. Run EOD Scan' first.", "Gen. EOD Singal");
         return;
+    }
+
+    // Build Tier Lookup Map from getActiveConstituents
+    const tierMap = {};
+    if (typeof getActiveConstituents === "function") {
+        const constituents = getActiveConstituents();
+        constituents.forEach(item => {
+            tierMap[item.symbol] = item.tier;
+        });
     }
 
     // Load existing positions map: symbol -> { status, tranche, slotsUsed, basketStatus }
@@ -58,6 +69,7 @@ function generateEODSignals() {
         const [date, sym, cmp, dma20, dma20Prior, dma50, vwap, vol, avgVol, trend, dip, recovery, dma20Reclaim, vwapReclaim] = indData[i];
 
         const pos = positionMap[sym] || { status: "NONE", tranche: "T0", slots: 0, basketStatus: "ACTIVE" };
+        const stockTier = tierMap[sym] || "SENSEX_30";
 
         const isMaxed = pos.slots >= CONFIG.MAX_TRANCHES_PER_STOCK;
         const isQuarantined = pos.basketStatus === "QUARANTINED";
@@ -83,7 +95,10 @@ function generateEODSignals() {
         let finalSignal = "NO_ACTION";
         let reason = "Conditions not met";
 
-        if (isMaxed) {
+        if (cmp > CONFIG.MAX_SHARE_PRICE) {
+            finalSignal = "SKIPPED_PRICE";
+            reason = `CMP ₹${cmp} exceeds max unit slot limit ₹${CONFIG.MAX_SHARE_PRICE}`;
+        } else if (isMaxed) {
             finalSignal = "MAXED";
             reason = "Stock has reached maximum 5 tranches";
         } else if (isQuarantined) {
@@ -111,6 +126,7 @@ function generateEODSignals() {
 
             qualifiedCandidates.push({
                 symbol: sym,
+                tier: stockTier,
                 candidateType: candidateType,
                 currentTranche: pos.tranche,
                 nextTranche: nextTranche,
@@ -133,6 +149,7 @@ function generateEODSignals() {
             time: timeStr,
             execDate: execDateStr,
             symbol: sym,
+            tier: stockTier,
             candidateType: candidateType,
             currentTranche: pos.tranche,
             nextTranche: nextTranche,
@@ -153,10 +170,48 @@ function generateEODSignals() {
     }
 
     // Pass to Ranking Engine
-    processRankingsAndActionQueue(qualifiedCandidates, allSignalsLog, openPositionCount, execDateStr);
+    // Update processRankingsAndActionQueue to handle Hedge actions
+    // However, RankingEngine handles candidates, so we can pass availableCash and openHedgePositions to it or handle it before/inside processRankingsAndActionQueue.
+    // Let's modify processRankingsAndActionQueue signature slightly, but since we should keep modifications contained, we can call HedgeEngine here.
+
+    // 1. Get Available Cash & Open Hedge Positions
+    let availableCash = CONFIG.CYCLE_CAPITAL;
+    if (posSheet) {
+        // Simple mock for available cash based on cycle capital - total invested
+        let totalInvested = 0;
+        for (let p = 1; p < posData.length; p++) {
+            totalInvested += Number(posData[p][4]) || 0; // "Total Invested" column
+        }
+        availableCash = CONFIG.CYCLE_CAPITAL - totalInvested;
+    }
+
+    let openHedgePositions = [];
+    const hedgeSheet = ss.getSheetByName("HEDGE_POSITIONS");
+    if (hedgeSheet) {
+        const hData = hedgeSheet.getDataRange().getValues();
+        for (let h = 1; h < hData.length; h++) {
+            openHedgePositions.push({
+                trancheId: hData[h][0],
+                symbol: hData[h][1],
+                buyPrice: hData[h][3],
+                qty: hData[h][4],
+                status: hData[h][6]
+            });
+        }
+    }
+
+    const qualifiedCount = qualifiedCandidates.length;
+    // For evaluating Hedge, we check if HedgeEngine function exists
+    let hedgeActions = [];
+    if (typeof evaluateSensexEtfHedge === "function") {
+        hedgeActions = evaluateSensexEtfHedge(qualifiedCount, openHedgePositions, availableCash);
+    }
+
+    // Pass to Ranking Engine
+    processRankingsAndActionQueue(qualifiedCandidates, allSignalsLog, openPositionCount, execDateStr, hedgeActions);
 
     const execTime = Date.now() - startTime;
-    logAudit("generateEODSignals", "GENERATE_SIGNALS", "SUCCESS", qualifiedCandidates.length, "Generated signals: " + qualifiedCandidates.length + " qualified BUY candidates", "", execTime);
+    logAudit("generateEODSignals", "GENERATE_SIGNALS", "SUCCESS", qualifiedCandidates.length, `Evaluated ${allSignalsLog.length} stocks | Generated ${qualifiedCandidates.length} qualified BUY candidates`, "", execTime);
 }
 
 /**
@@ -180,8 +235,11 @@ function runDailyEODJob() {
         // 2. Generate signals and rank top candidates into ACTION_QUEUE
         generateEODSignals();
 
-        logAudit("runDailyEODJob", "DAILY_EOD_JOB", "SUCCESS", 30, "Automated EOD scan & signal generation completed", "", 0);
+        const constituentsCount = typeof getActiveConstituents === "function" ? getActiveConstituents().length : 100;
+        logAudit("runDailyEODJob", "DAILY_EOD_JOB", "SUCCESS", constituentsCount, `Automated EOD scan & signal generation completed for ${constituentsCount} stocks`, "", 0);
     } catch (err) {
-        logAudit("runDailyEODJob", "DAILY_EOD_JOB", "FAILED", 0, "Automated scan failed", err.message, 0);
+        // err.stack se exact file name aur line number log hoga
+        Logger.log("ERROR STACK TRACE: " + err.stack);
+        logAudit("runDailyEODJob", "DAILY_EOD_JOB", "FAILED", 0, "Automated scan failed: " + err.message, err.stack, 0);
     }
 }

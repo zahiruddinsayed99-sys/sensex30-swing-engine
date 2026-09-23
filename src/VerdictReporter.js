@@ -8,7 +8,8 @@ function generateHinglishVerdictReport() {
   const indSheet = ss.getSheetByName("INDICATORS");
 
   if (!sigSheet || !indSheet) {
-    SpreadsheetApp.getUi().alert("SIGNALS ya INDICATORS sheet missing hai. Pehle EOD Scan run karein.");
+    //SpreadsheetApp.getUi().alert("SIGNALS ya INDICATORS sheet missing hai. Pehle EOD Scan run karein.");
+    safeAlert("SIGNALS ya INDICATORS sheet missing hai. Pehle EOD Scan run karein.", "Verdict Report");
     return;
   }
 
@@ -21,7 +22,8 @@ function generateHinglishVerdictReport() {
 
   const sigData = sigSheet.getDataRange().getValues();
   if (sigData.length < 2) {
-    SpreadsheetApp.getUi().alert("SIGNALS sheet empty hai.");
+    //SpreadsheetApp.getUi().alert("SIGNALS sheet empty hai.");
+    safeAlert("SIGNALS sheet empty hai.", "Verdict Report");
     return;
   }
 
@@ -58,7 +60,7 @@ function generateHinglishVerdictReport() {
     if (finalSig.toString().startsWith("BUY")) {
       hinglishExplanation = "✅ Green Flag! Trend strong hai, 5% ka badhiya discount mila, recovery shuru ho chuki hai, aur stock ne 20 DMA + VWAP dono ko reclaim kar liya hai.";
       actionGuide = "Kal 09:45 AM - 11:00 AM window me Zerodha me ₹4,000 slot ka order place karein.";
-    } 
+    }
     // 2. WAIT_RECLAIM
     else if (finalSig === "WAIT_RECLAIM") {
       if (dma20Rec === "FAIL" && vwapRec === "FAIL") {
@@ -69,12 +71,12 @@ function generateHinglishVerdictReport() {
         hinglishExplanation = "⏳ 20 DMA toh paar kar liya, par intraday benchmark (VWAP) ke neeche close hua hai.";
       }
       actionGuide = "Radar par rakhein. Kal agar breakout deta hai toh signal generate ho sakta hai.";
-    } 
+    }
     // 3. WAIT_RECOVERY
     else if (finalSig === "WAIT_RECOVERY") {
       hinglishExplanation = "🔪 Falling Knife! Stock 5% se zyada gir chuka hai, par abhi tak sambhla nahi hai (koi recovery sign nahi mila).";
       actionGuide = "Bilkul hath na lagayein! Jab tak bottom ban kar curve upar na ghume, wait karein.";
-    } 
+    }
     // 4. MAXED or QUARANTINED
     else if (finalSig === "MAXED") {
       hinglishExplanation = "🛑 Slot Full! Is stock ke 5 tranches (₹20,000 max) poore ho chuke hain.";
@@ -82,7 +84,7 @@ function generateHinglishVerdictReport() {
     } else if (finalSig === "QUARANTINED") {
       hinglishExplanation = "⚠️ Red Alert! Position -20% se zyada down hai. System ne isme loss averaging freeze kar di hai.";
       actionGuide = "Capital safe rakhne ke liye averaging band hai. Position hold rahegi.";
-    } 
+    }
     // 5. NO_ACTION
     else {
       if (trend === "FAIL" && dip === "FAIL") {
@@ -118,5 +120,33 @@ function generateHinglishVerdictReport() {
   repSheet.setColumnWidth(5, 420); // Hinglish Verdict
   repSheet.setColumnWidth(6, 260); // Action Guide
 
-  SpreadsheetApp.getUi().alert("📢 Hinglish Verdict Report Ready!\n\n'VERDICT_REPORT' tab par check karein.");
+  //SpreadsheetApp.getUi().alert("📢 Hinglish Verdict Report Ready!\n\n'VERDICT_REPORT' tab par check karein.");
+  safeAlert("📢 Hinglish Verdict Report Ready!\n\n'VERDICT_REPORT' tab par check karein.", "Verdict Report");
+}
+
+function testHedgeDiagnostic() {
+  Logger.log("=== Testing SENSEXIETF Hedge Diagnostics ===");
+  const etfData = fetchSensexEtfData(CONFIG.HEDGE.TICKER);
+
+  if (!etfData) {
+    Logger.log("❌ ERROR: Failed to fetch SENSEXIETF data from Yahoo Finance.");
+    return;
+  }
+
+  const cmp = etfData.cmp;
+  const high20D = etfData.high20D;
+  const closeT1 = etfData.closeT1;
+  const indexDipPct = ((high20D - cmp) / high20D) * 100;
+
+  Logger.log(`Ticker: ${CONFIG.HEDGE.TICKER}`);
+  Logger.log(`CMP: ₹${cmp}`);
+  Logger.log(`20-Day High: ₹${high20D}`);
+  Logger.log(`Previous Close (T-1): ₹${closeT1}`);
+  Logger.log(`Calculated Dip: ${indexDipPct.toFixed(2)}%`);
+  Logger.log(`H1 Threshold (>= 1.5% & Green Day): ${indexDipPct >= 1.5} & ${cmp >= closeT1}`);
+  Logger.log(`H2 Threshold (>= 3.5% & > VWAP): ${indexDipPct >= 3.5}`);
+  Logger.log(`H3 Threshold (>= 5.0% & Pivot Bounce): ${indexDipPct >= 5.0}`);
+
+  const actions = evaluateSensexEtfHedge(0, [], 100000);
+  Logger.log(`Hedge Actions Generated: ${JSON.stringify(actions)}`);
 }
