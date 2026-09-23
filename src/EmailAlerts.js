@@ -23,8 +23,8 @@ function sendEODSignalAlert() {
     for (let i = 1; i < sigData.length; i++) {
         const row = sigData[i];
         const sym = row[4];
-        const cmp = Number(row[9]) || 0;
-        const tranche = row[8] || "T1";
+        const cmp = Number(row[8]) || 0;
+        const tranche = row[7] || "T1";
         const signal = (row[19] || "").toString();
         const reason = row[20] || "";
 

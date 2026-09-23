@@ -93,7 +93,7 @@ function validatePhase1Setup() {
 function setupDailyEODTrigger() {
   const triggers = ScriptApp.getProjectTriggers();
   for (let i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === "runDailyEODJob") {
+    if (triggers[i].getHandlerFunction() === "runDailyEODJob" || triggers[i].getHandlerFunction() === "setupDailyEODTrigger") {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }

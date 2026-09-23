@@ -70,7 +70,7 @@ function runDataAndIndicatorPipeline() {
         });
 
         if (b + BATCH_SIZE < activeStocks.length) {
-            Utilities.sleep(400);
+            Utilities.sleep(1200);
         }
     }
 
@@ -117,7 +117,7 @@ function runDataAndIndicatorPipeline() {
 
                 if (rawC != null && rawH != null && rawL != null && rawO != null && v != null && v > 0) {
                     const adjC = (adjCloseObj && adjCloseObj[j] != null) ? adjCloseObj[j] : rawC;
-                    const splitFactor = rawC > 0 ? (adjC / rawC) : 1.0;
+                    const splitFactor = (rawC && rawC > 0) ? (adjC / rawC) : 1.0;
 
                     bars.push({
                         date: Utilities.formatDate(new Date(timestamps[j] * 1000), "Asia/Kolkata", "yyyy-MM-dd"),
@@ -144,7 +144,7 @@ function runDataAndIndicatorPipeline() {
             const closes = bars.map(b => b.close);
             const ema20 = calcEMA(closes, 20);
             const ema50 = calcEMA(closes, 50);
-            const ema200 = closes.length >= 200 ? calcEMA(closes, 200) : ema50;
+            const ema200 = closes.length >= 200 ? calcEMA(closes, 200) : calcEMA(closes, closes.length);
 
             const volumes = bars.map(b => b.volume);
             const avgVol = Math.round(calcAvg(volumes.slice(-20)));

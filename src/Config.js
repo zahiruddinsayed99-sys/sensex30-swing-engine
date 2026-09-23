@@ -10,11 +10,11 @@ const CONFIG = {
   // Basket Cycle Parameters
   CYCLE_CAPITAL: 100000,          // Total pool: ₹1,00,000
   SLOT_SIZE: 4000,                 // ₹4,000 per slot action
-  TOTAL_CYCLE_SLOTS: 25,          // 25 slots
-  MAX_DISTINCT_STOCKS: 10,        // Max 10 distinct stocks in basket
-  MAX_TRANCHES_PER_STOCK: 5,      // Max 5 slots (₹20,000) per stock
-  BASKET_TARGET_PERCENT: 6.5,     // Active pool blended target (+6.5%)
-  QUARANTINE_THRESHOLD_PERCENT: -20.0, // Hard quarantine boundary (-20%)
+  TOTAL_CYCLE_SLOTS: 24,          // 25 slots
+  MAX_DISTINCT_STOCKS: 6,        // Max 10 distinct stocks in basket
+  MAX_TRANCHES_PER_STOCK: 4,      // Max 5 slots (₹20,000) per stock
+  CONSOLIDATED_TARGET_PCT: 6.0,     // Active pool blended target (+6.5%)
+  QUARANTINE_PCT: -20.0, // Hard quarantine boundary (-20%)
   MAX_SHARE_PRICE: 5500,
 
   // Strategy Technical Parameters
@@ -46,7 +46,7 @@ const SHEET_SCHEMAS = {
   DASHBOARD: [],
   SETTINGS: ["Key", "Value", "Description", "Type"],
   WATCHLIST: ["Symbol", "Company Name", "Yahoo Ticker", "Tier", "Status"],
-  INDICATORS: ["Date", "Symbol", "Close", "DMA20", "DMA20 Prior", "DMA50", "Previous Session VWAP", "Volume", "Average Volume", "Trend Status", "Dip Status", "Recovery Status", "DMA20 Reclaim", "VWAP Reclaim"],
+  INDICATORS: ["Date", "Symbol", "Close", "DMA20", "DMA50", "DMA200", "Previous Session VWAP", "Volume", "Average Volume", "Trend Status", "Dip Status", "Recovery Status", "DMA20 Reclaim", "VWAP Reclaim"],
   POSITIONS: ["Symbol", "Status", "Current Tranche", "Slots Used", "Total Invested", "Quantity", "Average Price", "Current Price", "Unrealized PnL %", "Basket Status", "Last Buy Date", "Next Eligible Tranche"],
   SIGNALS: ["Signal ID", "Signal Date", "Signal Time", "Execution Date", "Symbol", "Candidate Type", "Current Tranche", "Next Tranche", "Close", "DMA20", "DMA50", "Previous VWAP", "Dip", "Recovery", "DMA20 Reclaim", "VWAP Reclaim", "Trend", "Rank Score", "Rank", "Final Signal", "Reason", "Signal Status", "Frozen"],
   ACTION_QUEUE: ["Execution Date", "Symbol", "Asset Type", "Action Type", "Tranche", "Slot Amount", "Rank", "Rank Score", "Signal ID", "Validity", "Action Status", "User Confirmation", "Execution ID"],
