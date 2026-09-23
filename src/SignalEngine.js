@@ -9,6 +9,7 @@ function generateEODSignals() {
     const indSheet = ss.getSheetByName("INDICATORS");
     const posSheet = ss.getSheetByName("POSITIONS");
     const sigSheet = ss.getSheetByName("SIGNALS");
+    const tradeLogSheet = ss.getSheetByName("TRADE_LOG");
 
     if (!indSheet || !posSheet || !sigSheet) {
         safeAlert("Required sheets missing.", "Gen. EOD Signal");
@@ -29,7 +30,23 @@ function generateEODSignals() {
         });
     }
 
-    // Load existing positions map
+    // Pre-build T1 entry price map from TRADE_LOG (if available) for precise drawdown laddering
+    const t1PriceMap = {};
+    if (tradeLogSheet && tradeLogSheet.getLastRow() > 1) {
+        const tLogData = tradeLogSheet.getDataRange().getValues();
+        for (let t = 1; t < tLogData.length; t++) {
+            const sym = tLogData[t][3];
+            const action = tLogData[t][4];
+            const tranche = tLogData[t][5];
+            const execPrice = Number(tLogData[t][7]) || 0;
+            if (sym && action === "BUY" && tranche === "T1" && execPrice > 0 && !t1PriceMap[sym]) {
+                t1PriceMap[sym] = execPrice;
+            }
+        }
+    }
+
+    // Load existing positions map: symbol -> { status, tranche, slots, totalInvested, qty, avgPrice, t1Price, basketStatus }
+    // POSITIONS Schema: [0: Symbol, 1: Status, 2: Current Tranche, 3: Slots Used, 4: Total Invested, 5: Quantity, 6: Average Price, 7: Current Price, 8: Unrealized PnL %, 9: Basket Status, 10: Last Buy Date, 11: Next Eligible Tranche]
     const posData = posSheet.getDataRange().getValues();
     const positionMap = {};
     let openPositionCount = 0;
@@ -40,12 +57,13 @@ function generateEODSignals() {
         const tranche = posData[p][2] || "T0";
         const slots = Number(posData[p][3]) || 0;
         const totalInvested = Number(posData[p][4]) || 0;
-        const avgPrice = Number(posData[p][5]) || 0;
-        const t1Price = Number(posData[p][6]) || avgPrice;
-        const basketStatus = posData[p][9] || "ACTIVE";
+        const qty = Number(posData[p][5]) || 0;            // Col F (Index 5) is Quantity
+        const avgPrice = Number(posData[p][6]) || 0;       // Col G (Index 6) is Average Price
+        const t1Price = t1PriceMap[sym] || avgPrice;       // Col G / Trade Log entry price
+        const basketStatus = posData[p][9] || "ACTIVE";     // Col J (Index 9) is Basket Status
 
         if (sym) {
-            positionMap[sym] = { status, tranche, slots, totalInvested, avgPrice, t1Price, basketStatus };
+            positionMap[sym] = { status, tranche, slots, totalInvested, qty, avgPrice, t1Price, basketStatus };
             if (status === "OPEN") {
                 openPositionCount++;
             }
@@ -71,7 +89,7 @@ function generateEODSignals() {
     for (let i = 1; i < indData.length; i++) {
         const [date, sym, cmp, ema20, ema50, ema200, vwap, vol, avgVol, trend, dip, recovery, dma20Reclaim, vwapReclaim] = indData[i];
 
-        const pos = positionMap[sym] || { status: "NONE", tranche: "T0", slots: 0, totalInvested: 0, avgPrice: 0, t1Price: 0, basketStatus: "ACTIVE" };
+        const pos = positionMap[sym] || { status: "NONE", tranche: "T0", slots: 0, totalInvested: 0, qty: 0, avgPrice: 0, t1Price: 0, basketStatus: "ACTIVE" };
         const stockTier = tierMap[sym] || "SENSEX_30";
 
         const currentTrancheNum = parseInt(String(pos.tranche).replace("T", "")) || 0;
@@ -93,12 +111,12 @@ function generateEODSignals() {
             const drawdownFromT1 = (t1RefPrice && t1RefPrice > 0) ? ((cmp - t1RefPrice) / t1RefPrice) * 100 : 0;
             const pnlFromAvg = (pos.avgPrice && pos.avgPrice > 0) ? ((cmp - pos.avgPrice) / pos.avgPrice) * 100 : 0;
 
-            // 1. Target Exit Check (+6.0%)
+            // 1. Target Exit Check (+6.0% on blended average price)
             if (pnlFromAvg >= TARGET_PCT) {
                 finalSignal = "EXIT_PROFIT";
                 reason = `Target reached (+${pnlFromAvg.toFixed(1)}%). Book profit on ${pos.tranche}.`;
             }
-            // 2. Quarantine Check (-20% from T1)
+            // 2. Quarantine Check (-20% from T1 reference)
             else if (drawdownFromT1 <= QUARANTINE_PCT || isQuarantined) {
                 finalSignal = "QUARANTINED";
                 reason = `Down ${drawdownFromT1.toFixed(1)}% from T1 (below ${QUARANTINE_PCT}%). Freeze buying.`;
@@ -108,7 +126,7 @@ function generateEODSignals() {
                 finalSignal = "HOLD_MAX";
                 reason = `Max ${MAX_TRANCHES} tranches allocated. Awaiting mean-reversion recovery.`;
             }
-            // 4. Tranche Additions
+            // 4. Tranche Additions Based on Drawdown Spacing
             else {
                 if (currentTrancheNum === 1 && drawdownFromT1 <= -4.5) {
                     nextTranche = "T2";
