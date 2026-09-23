@@ -74,7 +74,7 @@ function generateEODSignals() {
         const pos = positionMap[sym] || { status: "NONE", tranche: "T0", slots: 0, totalInvested: 0, avgPrice: 0, t1Price: 0, basketStatus: "ACTIVE" };
         const stockTier = tierMap[sym] || "SENSEX_30";
 
-        const currentTrancheNum = parseInt(pos.tranche.replace("T", "")) || 0;
+        const currentTrancheNum = parseInt(String(pos.tranche).replace("T", "")) || 0;
         const isMaxed = pos.slots >= MAX_TRANCHES || currentTrancheNum >= MAX_TRANCHES;
         const isQuarantined = pos.basketStatus === "QUARANTINED";
 
@@ -90,8 +90,8 @@ function generateEODSignals() {
         // ----------------------------------------------------
         if (pos.status === "OPEN") {
             const t1RefPrice = pos.t1Price > 0 ? pos.t1Price : pos.avgPrice;
-            const drawdownFromT1 = ((cmp - t1RefPrice) / t1RefPrice) * 100;
-            const pnlFromAvg = pos.avgPrice > 0 ? ((cmp - pos.avgPrice) / pos.avgPrice) * 100 : 0;
+            const drawdownFromT1 = (t1RefPrice && t1RefPrice > 0) ? ((cmp - t1RefPrice) / t1RefPrice) * 100 : 0;
+            const pnlFromAvg = (pos.avgPrice && pos.avgPrice > 0) ? ((cmp - pos.avgPrice) / pos.avgPrice) * 100 : 0;
 
             // 1. Target Exit Check (+6.0%)
             if (pnlFromAvg >= TARGET_PCT) {
