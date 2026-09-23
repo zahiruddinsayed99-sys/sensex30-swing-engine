@@ -1,47 +1,58 @@
 /**
- * In-Memory Pipeline: Parallel Market Data Fetch + Real-Time Indicator & CAR State Engine
+ * In-Memory Pipeline: Parallel Market Data Fetch + Real-Time Indicator Engine
  */
-
-
 function calcAvg(arr) {
     if (!arr || arr.length === 0) return 0;
     return arr.reduce((acc, v) => acc + v, 0) / arr.length;
-}/**
- * In-Memory Pipeline: Parallel Market Data Fetch + Real-Time Indicator & CAR State Engine
- */
+}
+
+function calcEMA(values, period) {
+    if (!values || values.length < period) return null;
+    const k = 2 / (period + 1);
+    let ema = values.slice(0, period).reduce((a, b) => a + b, 0) / period;
+    for (let i = period; i < values.length; i++) {
+        ema = values[i] * k + ema * (1 - k);
+    }
+    return ema;
+}
+
 function runDataAndIndicatorPipeline() {
     const startTime = Date.now();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const indSheet = ss.getSheetByName("INDICATORS");
 
     if (!indSheet) {
-        //SpreadsheetApp.getUi().alert("INDICATORS sheet missing. Please run Clean Setup first.");
         safeAlert("INDICATORS sheet missing. Please run Clean Setup first.", "Indicators");
         return;
     }
 
-    // 1. Single Source of Truth: getActiveConstituents() se load karein
     let constituents = [];
     try {
         constituents = getActiveConstituents();
     } catch (e) {
-        //SpreadsheetApp.getUi().alert("Watchlist Error: " + e.message);
         safeAlert("Watchlist Error: " + e.message, "Indicators");
         return;
     }
 
     if (!constituents || constituents.length === 0) {
-        //SpreadsheetApp.getUi().alert("No active stocks found in WATCHLIST.");
         safeAlert("No active stocks found in WATCHLIST.", "Indicators");
         return;
     }
 
-    const activeStocks = constituents.map(item => ({
-        symbol: item.symbol,
-        ticker: item.ticker || (item.symbol.endsWith(".NS") ? item.symbol : `${item.symbol}.NS`)
-    }));
+    // Deduplicate constituents
+    const seenSymbols = new Set();
+    const activeStocks = [];
+    for (let c = 0; c < constituents.length; c++) {
+        const sym = constituents[c].symbol;
+        if (sym && !seenSymbols.has(sym)) {
+            seenSymbols.add(sym);
+            activeStocks.push({
+                symbol: sym,
+                ticker: constituents[c].ticker || (sym.endsWith(".NS") ? sym : `${sym}.NS`)
+            });
+        }
+    }
 
-    // 2. Fetch in parallel batches of 15
     const BATCH_SIZE = 15;
     const rawResponses = [];
 
@@ -63,16 +74,13 @@ function runDataAndIndicatorPipeline() {
         }
     }
 
-    // 3. Parse bars & compute indicators directly in memory
     const indicatorRows = [];
     const errors = [];
-    let successCount = 0;
 
     for (let i = 0; i < rawResponses.length; i++) {
         const stock = rawResponses[i].stock;
         let resp = rawResponses[i].response;
 
-        // Auto-retry once if throttled (429) or network issue
         if (!resp || resp.getResponseCode() !== 200) {
             Utilities.sleep(1200);
             try {
@@ -97,22 +105,26 @@ function runDataAndIndicatorPipeline() {
 
             const timestamps = result.timestamp;
             const quote = result.indicators.quote[0];
+            const adjCloseObj = result.indicators.adjclose ? result.indicators.adjclose[0].adjclose : null;
             const bars = [];
 
             for (let j = 0; j < timestamps.length; j++) {
-                const o = quote.open[j];
-                const h = quote.high[j];
-                const l = quote.low[j];
-                const c = quote.close[j];
+                const rawC = quote.close[j];
+                const rawO = quote.open[j];
+                const rawH = quote.high[j];
+                const rawL = quote.low[j];
                 const v = quote.volume[j];
 
-                if (o != null && h != null && l != null && c != null && v != null && v > 0) {
+                if (rawC != null && rawH != null && rawL != null && rawO != null && v != null && v > 0) {
+                    const adjC = (adjCloseObj && adjCloseObj[j] != null) ? adjCloseObj[j] : rawC;
+                    const splitFactor = rawC > 0 ? (adjC / rawC) : 1.0;
+
                     bars.push({
                         date: Utilities.formatDate(new Date(timestamps[j] * 1000), "Asia/Kolkata", "yyyy-MM-dd"),
-                        open: Number(o.toFixed(2)),
-                        high: Number(h.toFixed(2)),
-                        low: Number(l.toFixed(2)),
-                        close: Number(c.toFixed(2)),
+                        open: Number((rawO * splitFactor).toFixed(2)),
+                        high: Number((rawH * splitFactor).toFixed(2)),
+                        low: Number((rawL * splitFactor).toFixed(2)),
+                        close: Number(adjC.toFixed(2)),
                         volume: Math.round(v)
                     });
                 }
@@ -124,67 +136,43 @@ function runDataAndIndicatorPipeline() {
 
             bars.sort((a, b) => (a.date > b.date ? 1 : -1));
 
-            // --- CALCULATIONS ---
             const n = bars.length;
             const todayBar = bars[n - 1];
             const prevBar = bars[n - 2];
             const cmp = todayBar.close;
 
             const closes = bars.map(b => b.close);
-            const dma20 = calcAvg(closes.slice(-20));
-            const dma20Prior = calcAvg(closes.slice(-21, -1));
-            const dma50 = calcAvg(closes.slice(-50));
+            const ema20 = calcEMA(closes, 20);
+            const ema50 = calcEMA(closes, 50);
+            const ema200 = closes.length >= 200 ? calcEMA(closes, 200) : ema50;
 
             const volumes = bars.map(b => b.volume);
             const avgVol = Math.round(calcAvg(volumes.slice(-20)));
-
-            // Single-Day Previous Session VWAP: Typical Price (H+L+C)/3
             const prevSessionVWAP = Number(((prevBar.high + prevBar.low + prevBar.close) / 3).toFixed(2));
 
-            // 1. Trend Filter: 20 DMA flat-to-rising AND CMP > 50 DMA
-            const isTrendPass = (dma20 >= dma20Prior) && (cmp > dma50);
-            const trendStatus = isTrendPass ? "PASS" : "FAIL";
+            // 1. Structural Trend: Price > 200 EMA (or 50 EMA if <200 bars) & medium-term structure intact
+            const passesTrend = (cmp > ema200) && (ema20 > ema50 || cmp > ema50);
+            const trendStatus = passesTrend ? "PASS" : "FAIL";
 
-            // 2. Dip Filter: >= 5% drop from 30-day reference high
-            const recent30Bars = bars.slice(-30);
-            let refHigh = -1;
-            let highIdx = -1;
-            for (let k = 0; k < recent30Bars.length; k++) {
-                if (recent30Bars[k].high > refHigh) {
-                    refHigh = recent30Bars[k].high;
-                    highIdx = k;
-                }
-            }
-            const dipPercent = ((refHigh - cmp) / refHigh) * 100;
-            const dipStatus = dipPercent >= 5.0 ? "PASS" : "FAIL";
+            // 2. Dynamic Pullback: Intraday tested near 20 EMA, close holds above support
+            const passesDip = (todayBar.low <= ema20 * 1.01) && (cmp >= ema20 * 0.985);
+            const dipStatus = passesDip ? "PASS" : "FAIL";
 
-            // 3. CAR Recovery Logic (Cumulative Average Recovery)
-            const closesSinceHigh = recent30Bars.slice(highIdx).map(b => b.close);
-            let recoveryStatus = "FAIL";
-            if (closesSinceHigh.length >= 3) {
-                const cumAvgs = [];
-                let runningSum = 0;
-                for (let m = 0; m < closesSinceHigh.length; m++) {
-                    runningSum += closesSinceHigh[m];
-                    cumAvgs.push(runningSum / (m + 1));
-                }
-                // Uptrend in cumulative average + bouncing above prior session low
-                if (cumAvgs[cumAvgs.length - 1] > cumAvgs[cumAvgs.length - 2] && cmp > prevBar.low) {
-                    recoveryStatus = "PASS";
-                }
-            }
+            // 3. Recovery: Confirmed reversal above prior session high or VWAP
+            const passesRecovery = (cmp >= prevBar.high) || (cmp > prevSessionVWAP && cmp > prevBar.close);
+            const recoveryStatus = passesRecovery ? "PASS" : "FAIL";
 
-            // 4. Reclaims: CMP > 20 DMA AND CMP > Previous Session VWAP
-            const dma20Reclaim = cmp > dma20 ? "PASS" : "FAIL";
+            // 4. Reclaims
+            const dma20Reclaim = cmp >= ema20 ? "PASS" : "FAIL";
             const vwapReclaim = cmp > prevSessionVWAP ? "PASS" : "FAIL";
 
             indicatorRows.push([
                 todayBar.date,
                 stock.symbol,
                 cmp,
-                Number(dma20.toFixed(2)),
-                Number(dma20Prior.toFixed(2)),
-                Number(dma50.toFixed(2)),
+                Number(ema20.toFixed(2)),
+                Number(ema50.toFixed(2)),
+                Number(ema200.toFixed(2)),
                 prevSessionVWAP,
                 todayBar.volume,
                 avgVol,
@@ -194,14 +182,11 @@ function runDataAndIndicatorPipeline() {
                 dma20Reclaim,
                 vwapReclaim
             ]);
-
-            successCount++;
         } catch (err) {
             errors.push(stock.symbol + ": " + err.message);
         }
     }
 
-    // 4. Write directly to INDICATORS
     if (indSheet.getLastRow() > 1) {
         indSheet.getRange(2, 1, indSheet.getLastRow() - 1, indSheet.getLastColumn()).clearContent();
     }
@@ -216,13 +201,7 @@ function runDataAndIndicatorPipeline() {
     }
 
     safeAlert(
-        `In-Memory Scan Complete!\n\nExecution Time: ${(execTime / 1000).toFixed(1)}s\nStocks Processed: ${indicatorRows.length} / ${constituents.length}\nAll constituents computed cleanly!`,
+        `In-Memory Scan Complete!\n\nExecution Time: ${(execTime / 1000).toFixed(1)}s\nStocks Processed: ${indicatorRows.length} / ${activeStocks.length}\nAdjusted series computed cleanly!`,
         "Indicators"
     );
-    //SpreadsheetApp.getUi().alert(`In-Memory Scan Complete!\n\nExecution Time: ${(execTime / 1000).toFixed(1)}s\nStocks //Processed: ${indicatorRows.length} / ${constituents.length}\nAll constituents computed cleanly!`);
-}
-
-function calcAvg(arr) {
-    if (!arr || arr.length === 0) return 0;
-    return arr.reduce((acc, v) => acc + v, 0) / arr.length;
 }
