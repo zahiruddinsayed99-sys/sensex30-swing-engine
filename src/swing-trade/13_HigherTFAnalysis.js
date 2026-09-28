@@ -123,9 +123,9 @@ function determineMarketStructure(
 
   if (
     latestSupport.price >
-      previousSupport.price &&
+    previousSupport.price &&
     latestResistance.price >
-      previousResistance.price
+    previousResistance.price
   ) {
     return {
       status: 'OK',
@@ -135,9 +135,9 @@ function determineMarketStructure(
 
   if (
     latestSupport.price <
-      previousSupport.price &&
+    previousSupport.price &&
     latestResistance.price <
-      previousResistance.price
+    previousResistance.price
   ) {
     return {
       status: 'OK',
@@ -196,13 +196,25 @@ function analyzeHigherTimeframe(
     );
 
   /*
-   * Retrieve actual higher-timeframe data.
-   */
+  * Retrieve enough higher-timeframe candles
+  * for every downstream calculation.
+  *
+  * Volume Analysis requires:
+  * Volume Lookback + 1
+  * because the current candle is included.
+  */
+  const requiredLookback =
+    Math.max(
+      candleLookback,
+      volumeLookback + 1,
+      movingAveragePeriod
+    );
+
   const marketData =
     getYahooData(
       symbol,
       timeframe,
-      candleLookback
+      requiredLookback
     );
 
   if (marketData.status !== 'OK') {
@@ -335,14 +347,14 @@ function analyzeHigherTimeframe(
   if (
     trend === 'UPTREND' &&
     structure.structure ===
-      'HIGHER_HIGHS_HIGHER_LOWS' &&
+    'HIGHER_HIGHS_HIGHER_LOWS' &&
     movingAverage.pricePosition === 'ABOVE'
   ) {
     context = 'POSITIVE';
   } else if (
     trend === 'DOWNTREND' &&
     structure.structure ===
-      'LOWER_HIGHS_LOWER_LOWS' &&
+    'LOWER_HIGHS_LOWER_LOWS' &&
     movingAverage.pricePosition === 'BELOW'
   ) {
     context = 'NEGATIVE';
@@ -381,14 +393,14 @@ function analyzeHigherTimeframe(
     recentSwingHigh:
       supportResistance
         .resistanceLevels[
-          supportResistance.resistanceLevels.length - 1
-        ],
+      supportResistance.resistanceLevels.length - 1
+      ],
 
     recentSwingLow:
       supportResistance
         .supportLevels[
-          supportResistance.supportLevels.length - 1
-        ],
+      supportResistance.supportLevels.length - 1
+      ],
 
     candle: candle,
 
