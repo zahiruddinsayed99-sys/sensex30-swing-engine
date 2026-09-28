@@ -6,7 +6,7 @@
 /**
  * Retrieves OHLCV data from Yahoo Finance.
  */
-function getYahooData(symbol, timeframe) {
+function getYahooData(symbol, timeframe, requiredCandles) {
   const intervalMap = {
     'Daily': '1d',
     '4 Hour': '1h',
@@ -27,9 +27,19 @@ function getYahooData(symbol, timeframe) {
 
   const period2 = Math.floor(Date.now() / 1000);
 
-  // Initial test window: 30 days.
+  const required =
+    Number.isInteger(requiredCandles) && requiredCandles > 0
+      ? requiredCandles
+      : 20;
+
+  // Allow extra calendar days for weekends and market holidays.
+  const calendarDays =
+    timeframe === 'Daily'
+      ? Math.max(60, required * 3)
+      : 30;
+
   const period1 =
-    period2 - (30 * 24 * 60 * 60);
+    period2 - (calendarDays * 24 * 60 * 60);
 
   const url =
     'https://query1.finance.yahoo.com/v8/finance/chart/' +
