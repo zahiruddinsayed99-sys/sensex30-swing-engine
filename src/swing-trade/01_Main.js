@@ -20,10 +20,8 @@ function onOpen() {
             'Test Settings',
             'testSettings'
         )
-        .addItem(
-            'Test Yahoo Data',
-            'runDataTest'
-        )
+        .addItem('Test Yahoo Data', 'runDataTest')
+        .addItem('Run Analysis', 'runAnalysis')
         .addItem(
             'Test Decision Engine',
             'runDecisionEngineTest'
@@ -34,15 +32,6 @@ function onOpen() {
         )
         .addToUi();
 }
-
-
-/**
- * Phase C+ placeholder.
- */
-function runAnalysis() {
-    showNotImplemented('Run Analysis');
-}
-
 
 
 /**

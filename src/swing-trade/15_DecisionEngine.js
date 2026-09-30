@@ -210,10 +210,40 @@ function evaluateDecision(
     });
 
     /*
-     * --------------------------------------------------
-     * 5. RECORD SATISFIED / FAILED CONDITIONS
-     * --------------------------------------------------
-     */
+    * --------------------------------------------------
+    * 5A. CONDITION GROUP SCORES
+    * --------------------------------------------------
+    */
+
+    const htfConditions = conditions.slice(0, 5);
+    const ltfConditions = conditions.slice(5, 11);
+    const targetCondition = conditions[11];
+
+    const htfSatisfied = htfConditions.filter(
+        condition => condition.passed
+    ).length;
+
+    const ltfSatisfied = ltfConditions.filter(
+        condition => condition.passed
+    ).length;
+
+    const targetPassed = Boolean(
+        targetCondition && targetCondition.passed
+    );
+
+    const htfTotal = htfConditions.length;
+    const ltfTotal = ltfConditions.length;
+    const targetTotal = targetCondition ? 1 : 0;
+
+    const overallSatisfied =
+        htfSatisfied +
+        ltfSatisfied +
+        (targetPassed ? 1 : 0);
+
+    const overallTotal =
+        htfTotal +
+        ltfTotal +
+        targetTotal;
 
     for (const condition of conditions) {
         if (condition.passed) {
@@ -270,109 +300,233 @@ function evaluateDecision(
 
     let finalDecision;
 
+    /*
+    * --------------------------------------------------
+    * 6. FINAL DECISION
+    * --------------------------------------------------
+    *
+    * CONFIRM remains strict.
+    * WAIT represents a meaningful but incomplete setup.
+    * NO SETUP represents insufficient supporting evidence.
+    */
+
+    let primaryReason;
+    let secondaryReason;
+    let nextAction;
+
+    /*
+    * --------------------------------------------------
+    * CONFIRM
+    * --------------------------------------------------
+    *
+    * Do NOT weaken this gate.
+    */
     if (
         bullishHigherTF &&
         bullishLowerTF &&
         targetSatisfied
     ) {
         finalDecision = 'CONFIRM';
-    } else if (
-        targetSatisfied &&
-        (
-            higherTF.context === 'POSITIVE' ||
-            lowerTF.context === 'POSITIVE' ||
-            lowerCandle ||
-            lowerVolume
-        )
-    ) {
-        finalDecision = 'WAIT';
-    } else {
-        finalDecision = 'NO SETUP';
+
+        primaryReason =
+            'Higher timeframe, lower timeframe and target conditions confirmed.';
+
+        secondaryReason =
+            `${overallSatisfied}/${overallTotal} conditions satisfied.`;
+
+        nextAction =
+            'POTENTIAL TRADE ELIGIBLE';
     }
 
     /*
-     * --------------------------------------------------
-     * 8. PRIMARY REASON
-     * --------------------------------------------------
-     */
+    * --------------------------------------------------
+    * WAIT
+    * --------------------------------------------------
+    *
+    * A meaningful partial setup exists, but the
+    * complete confirmation gate has not been met.
+    */
+    else if (
+        targetSatisfied &&
+        (
+            htfSatisfied >= 3 ||
+            ltfSatisfied >= 3
+        )
+    ) {
+        finalDecision = 'WAIT';
 
-    let primaryReason = '';
+        /*
+        * WAIT represents a meaningful partial setup.
+        *
+        * Detailed Primary Reason and Secondary Reason
+        * are constructed later from the actual failed
+        * conditions.
+        */
+        nextAction =
+            'WAIT FOR CONFIRMATION';
+    }
+
+    /*
+    * --------------------------------------------------
+    * NO SETUP
+    * --------------------------------------------------
+    */
+    else {
+        finalDecision = 'NO SETUP';
+
+        if (!targetSatisfied) {
+            primaryReason =
+                'Insufficient target room.';
+
+            secondaryReason =
+                `${overallSatisfied}/${overallTotal} conditions satisfied.`;
+
+            nextAction =
+                'NO ACTION — TARGET ROOM INSUFFICIENT';
+        }
+        else {
+            primaryReason =
+                'Insufficient setup confirmation.';
+
+            secondaryReason =
+                `${overallSatisfied}/${overallTotal} conditions satisfied.`;
+
+            nextAction =
+                'NO ACTION — SETUP INCOMPLETE';
+        }
+    }
+
+    /*
+    * --------------------------------------------------
+    * 8. PRIMARY REASON
+    * --------------------------------------------------
+    */
+
+    primaryReason = '';
 
     if (!targetSatisfied) {
+
         primaryReason =
             'Insufficient target room.';
+
     } else if (
         !bullishHigherTF &&
         !bullishLowerTF
     ) {
+
         primaryReason =
-            'Higher and lower timeframe confirmation are insufficient.';
+            'Partial setup detected — ' +
+            conditionsSatisfied +
+            '/' +
+            totalConditions +
+            ' conditions satisfied. ' +
+            'Higher and lower timeframe confirmation are both incomplete.';
+
     } else if (!bullishHigherTF) {
+
         primaryReason =
-            'Higher timeframe confirmation is insufficient.';
+            'Partial setup detected — ' +
+            conditionsSatisfied +
+            '/' +
+            totalConditions +
+            ' conditions satisfied. ' +
+            'Higher timeframe confirmation is incomplete.';
+
     } else if (!bullishLowerTF) {
+
         primaryReason =
-            'Lower timeframe confirmation is insufficient.';
+            'Partial setup detected — ' +
+            conditionsSatisfied +
+            '/' +
+            totalConditions +
+            ' conditions satisfied. ' +
+            'Lower timeframe confirmation is incomplete.';
+
     } else {
+
         primaryReason =
             'Required technical conditions are satisfied.';
+
     }
 
     /*
-     * --------------------------------------------------
-     * 9. SECONDARY REASON
-     * --------------------------------------------------
-     */
+    * --------------------------------------------------
+    * 9. SECONDARY REASON
+    * --------------------------------------------------
+    */
 
-    let secondaryReason =
+    secondaryReason =
         'No additional supporting evidence.';
 
     if (divergence === 'BULLISH') {
+
         secondaryReason =
             'Bullish volume divergence provides supporting evidence.';
+
     } else if (divergence === 'BEARISH') {
+
         secondaryReason =
             'Bearish volume divergence weakens the setup.';
+
     } else if (divergence === 'NONE') {
+
         secondaryReason =
             'No volume divergence detected.';
     }
 
+    /*
+    * Add failed-condition detail for WAIT decisions.
+    *
+    * This does not change the decision.
+    * It only makes the reason more actionable.
+    */
+    if (
+        finalDecision === 'WAIT' &&
+        Array.isArray(failed) &&
+        failed.length > 0
+    ) {
+
+        secondaryReason +=
+            ' Waiting for confirmation: ' +
+            failed.join(', ') +
+            '.';
+    }
     return {
         status: 'OK',
 
-        finalDecision: finalDecision,
+        /*
+          * Overall condition summary
+          */
+        conditionsSatisfied,
+        totalConditions,
 
-        conditionsSatisfied:
-            conditionsSatisfied,
+        /*
+          * Detailed condition breakdown
+          */
+        satisfiedConditions: satisfied,
+        failedConditions: failed,
 
-        totalConditions:
-            totalConditions,
+        /*
+          * Group scores
+          */
+        htfSatisfied,
+        htfTotal,
 
-        primaryReason:
-            primaryReason,
+        ltfSatisfied,
+        ltfTotal,
 
-        secondaryReason:
-            secondaryReason,
+        targetSatisfied,
 
-        satisfiedConditions:
-            satisfied,
+        overallSatisfied,
+        overallTotal,
 
-        failedConditions:
-            failed,
-
-        volumeDivergence:
-            divergence,
-
-        targetRequirement:
-            targetAnalysis.targetSatisfied
-                ? 'SATISFIED' : 'NOT SATISFIED',
-
-        targetPrice:
-            targetAnalysis.targetPrice,
-
-        potentialReturn:
-            targetAnalysis.potentialReturn
+        /*
+          * Final decision
+          */
+        finalDecision,
+        primaryReason,
+        secondaryReason,
+        nextAction
     };
 }
 
@@ -518,7 +672,8 @@ function runDecisionEngineTest() {
             calculateTarget(
                 lowerTF.currentPrice,
                 lowerTF.resistance,
-                minimumTarget
+                minimumTarget,
+                higherTF.resistance
             );
 
         if (
@@ -569,14 +724,56 @@ function runDecisionEngineTest() {
             symbol +
             '\n\n' +
 
-            'Final Decision: ' +
-            decision.finalDecision +
+            'HTF Conditions: ' +
+            decision.htfSatisfied +
+            '/' +
+            decision.htfTotal +
+            '\n' +
+
+            'LTF Conditions: ' +
+            decision.ltfSatisfied +
+            '/' +
+            decision.ltfTotal +
+            '\n' +
+
+            'Target Requirement: ' +
+            (
+                decision.targetSatisfied
+                    ? 'SATISFIED'
+                    : 'NOT SATISFIED'
+            ) +
             '\n\n' +
 
-            'Conditions Satisfied: ' +
-            decision.conditionsSatisfied +
+            'Overall Conditions: ' +
+            decision.overallSatisfied +
             '/' +
-            decision.totalConditions +
+            decision.overallTotal +
+            '\n\n' +
+
+            'Satisfied Conditions:\n' +
+            (
+                decision.satisfiedConditions &&
+                    decision.satisfiedConditions.length > 0
+                    ? decision.satisfiedConditions.join('\n')
+                    : 'None'
+            ) +
+            '\n\n' +
+
+            'Failed Conditions:\n' +
+            (
+                decision.failedConditions &&
+                    decision.failedConditions.length > 0
+                    ? decision.failedConditions.join('\n')
+                    : 'None'
+            ) +
+            '\n\n' +
+
+            'Volume Divergence: ' +
+            volumeDivergence.divergence +
+            '\n\n' +
+
+            'Final Decision: ' +
+            decision.finalDecision +
             '\n\n' +
 
             'Primary Reason:\n' +
@@ -587,12 +784,8 @@ function runDecisionEngineTest() {
             decision.secondaryReason +
             '\n\n' +
 
-            'Volume Divergence: ' +
-            decision.volumeDivergence +
-            '\n' +
-
-            'Target Requirement: ' +
-            decision.targetRequirement
+            'Next Action:\n' +
+            decision.nextAction
         );
 
     } catch (error) {

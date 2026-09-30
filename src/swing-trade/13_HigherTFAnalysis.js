@@ -412,7 +412,22 @@ function analyzeHigherTimeframe(
     resistance:
       nearestResistance,
 
-    context: context
+    /*
+    * Full resistance levels are preserved for
+    * Target Engine multi-level target selection.
+    */
+    resistanceLevels:
+      supportResistance.resistanceLevels,
+
+    /*
+    * Full support levels are preserved for
+    * future target/stop analysis.
+    */
+    supportLevels:
+      supportResistance.supportLevels,
+
+    context:
+      context
   };
 }
 

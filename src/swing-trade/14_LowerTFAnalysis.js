@@ -487,6 +487,20 @@ function analyzeLowerTimeframe(
                 currentPrice
             ),
 
+        /*
+        * Full resistance levels are preserved for
+        * Target Engine multi-level target selection.
+        */
+        resistanceLevels:
+            supportResistance.resistanceLevels,
+
+        /*
+        * Full support levels are preserved for
+        * future target/stop analysis.
+        */
+        supportLevels:
+            supportResistance.supportLevels,
+
         context:
             lowerTFContext
     };
@@ -620,4 +634,3 @@ function runLowerTFAnalysisTest() {
         );
     }
 }
-
